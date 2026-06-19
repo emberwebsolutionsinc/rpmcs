@@ -59,4 +59,9 @@ class Lot extends Model
         return $this->hasMany(Reservation::class);
     }
 
+    public function sales()
+    {
+        return $this->hasMany(Sale::class);
+    }
+
 }

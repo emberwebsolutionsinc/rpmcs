@@ -192,6 +192,9 @@ const linkClass = (path) => {
                             <RouterLink @click="$emit('close')" to="/sales-management/reservations" class="flex items-center gap-3 rounded-lg px-4 py-2 transition" :class="linkClass('/sales-management/reservations')">
                                 <FileSignature class="h-4 w-4" /> Reservations
                             </RouterLink>
+                            <RouterLink @click="$emit('close')"to="/sales-management/sales"class="flex items-center gap-3 rounded-lg px-4 py-2 transition":class="linkClass('/sales-management/sales')">
+                                <BadgeDollarSign class="h-4 w-4" />Sales
+                            </RouterLink>
                         </div>
                     </transition>
 

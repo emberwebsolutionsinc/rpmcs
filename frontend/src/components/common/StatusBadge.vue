@@ -4,44 +4,45 @@ import { computed } from "vue";
 const props = defineProps({
     value: {
         type: String,
-        required: true,
+        default: "",
     },
 });
 
 const label = computed(() => {
-    return props.value
-        .replaceAll("_", " ")
-        .replace(/\b\w/g, (char) => char.toUpperCase());
+    const labels = {
+        active: "Active",
+        cancelled: "Cancelled",
+        expired: "Expired",
+        reserved: "Reserved",
+        available: "Available",
+        sold: "Sold",
+        converted_to_sale: "Converted",
+        fully_paid: "Fully Paid",
+    };
+
+    return labels[props.value] ?? props.value;
 });
 
 const badgeClass = computed(() => {
     const classes = {
-        active: "bg-emerald-100 text-emerald-700",
-        inactive: "bg-slate-100 text-slate-600",
-
-        available: "bg-emerald-100 text-emerald-700",
-        reserved: "bg-blue-100 text-blue-700",
-        sold: "bg-purple-100 text-purple-700",
-        fully_paid: "bg-green-100 text-green-700",
-        cancelled: "bg-red-100 text-red-700",
-
-        pending: "bg-yellow-100 text-yellow-700",
-        partial: "bg-orange-100 text-orange-700",
-        paid: "bg-emerald-100 text-emerald-700",
-        defaulted: "bg-red-100 text-red-700",
-
-        main_agent: "bg-indigo-100 text-indigo-700",
-        sub_agent: "bg-cyan-100 text-cyan-700",
-        independent_agent: "bg-slate-100 text-slate-700",
+        active: "bg-green-100 text-green-800",
+        cancelled: "bg-red-100 text-red-800",
+        expired: "bg-yellow-100 text-yellow-800",
+        reserved: "bg-blue-100 text-blue-800",
+        available: "bg-emerald-100 text-emerald-800",
+        sold: "bg-purple-100 text-purple-800",
+        converted_to_sale: "bg-indigo-100 text-indigo-800",
+        fully_paid: "bg-green-100 text-green-800",
     };
 
-    return classes[props.value] || "bg-slate-100 text-slate-600";
+    return classes[props.value] ??
+        "bg-slate-100 text-slate-700";
 });
 </script>
 
 <template>
     <span
-        class="inline-flex rounded-full px-3 py-1 text-xs font-semibold"
+        class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold"
         :class="badgeClass"
     >
         {{ label }}

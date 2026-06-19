@@ -42,4 +42,9 @@ class Reservation extends Model
     {
         return $this->belongsTo(Agent::class);
     }
+
+    public function sale()
+    {
+        return $this->hasOne(Sale::class);
+    }
 }

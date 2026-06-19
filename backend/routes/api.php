@@ -10,6 +10,8 @@ use App\Http\Controllers\Api\ClientController;
 use App\Http\Controllers\Api\AgentController;
 use App\Models\PropertyType;
 use App\Http\Controllers\Api\ReservationController;
+use App\Http\Controllers\Api\SaleController;
+use App\Http\Controllers\Api\DashboardController;
 
 Route::prefix('v1')->group(function () {
 
@@ -30,11 +32,30 @@ Route::prefix('v1')->group(function () {
         });
 
         Route::prefix('sales-management')->group(function () {
-        Route::apiResource('reservations', ReservationController::class);
 
-        Route::patch(
-            'reservations/{reservation}/cancel',
-            [ReservationController::class, 'cancel']
+            Route::apiResource(
+                'reservations',
+                ReservationController::class
+            );
+
+            Route::patch(
+                'reservations/{reservation}/cancel',
+                [ReservationController::class, 'cancel']
+            );
+
+            Route::get(
+                'sales-summary',
+                [SaleController::class, 'summary']
+            );
+
+            Route::apiResource(
+                'sales',
+                SaleController::class
+            );
+
+            Route::patch(
+                'sales/{sale}/cancel',
+                [SaleController::class, 'cancel']
             );
         });
 
@@ -52,5 +73,6 @@ Route::prefix('v1')->group(function () {
         Route::prefix('agent-management')->group(function () {
             Route::apiResource('agents', AgentController::class);
         });
+        Route::get('/dashboard-summary', [DashboardController::class, 'summary']);
     });
 });
