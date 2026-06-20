@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Sale extends Model
 {
@@ -45,5 +46,15 @@ class Sale extends Model
     public function agent()
     {
         return $this->belongsTo(Agent::class);
+    }
+
+    public function paymentSchedules(): HasMany
+    {
+        return $this->hasMany(PaymentSchedule::class);
+    }
+
+        public function collections()
+    {
+        return $this->hasMany(Collection::class);
     }
 }
