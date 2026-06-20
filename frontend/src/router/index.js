@@ -18,6 +18,8 @@ import SalesView from "@/views/sales-management/SalesView.vue";
 
 import PaymentsView from "@/views/collection-management/PaymentsView.vue";
 import ReceiptsView from "@/views/collection-management/ReceiptsView.vue";
+import CollectionsView from "@/views/sales-management/CollectionsView.vue";
+
 
 import CommissionsView from "@/views/commission-management/CommissionsView.vue";
 
@@ -215,6 +217,18 @@ const router = createRouter({
                 title: "Permissions",
             },
         },
+
+        {
+            path: "/sales-management/collections",
+            name: "collections",
+            component:CollectionsView,
+            meta: {
+                requiresAuth: true,
+                title: "Collections",
+            },
+        },
+
+        
     ],
 });
 

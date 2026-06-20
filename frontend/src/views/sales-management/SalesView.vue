@@ -12,18 +12,23 @@ import SaleStatistics from "@/components/sales/SaleStatistics.vue";
 import SaleFilters from "@/components/sales/SaleFilters.vue";
 import SaleTable from "@/components/sales/SaleTable.vue";
 import SaleDetailsDrawer from "@/components/sales/SaleDetailsDrawer.vue";
+import GenerateScheduleModal from "@/components/sales/GenerateScheduleModal.vue";
 
 import saleService from "@/services/saleService.js";
+import paymentScheduleService from "@/services/paymentScheduleService.js";
 import toast from "@/utils/toast";
 import { confirmDelete } from "@/utils/swal";
 
-import {
-    BadgeDollarSign,
-} from "lucide-vue-next";
+import { BadgeDollarSign } from "lucide-vue-next";
 
 const sales = ref([]);
 const loading = ref(false);
 const processing = ref(false);
+
+const showSaleDrawer = ref(false);
+const selectedSale = ref(null);
+
+const showGenerateScheduleModal = ref(false);
 
 const filters = reactive({
     search: "",
@@ -46,9 +51,6 @@ const statistics = reactive({
     total_contract_price: 0,
     total_balance: 0,
 });
-
-const showSaleDrawer = ref(false);
-const selectedSale = ref(null);
 
 const fetchSummary = async () => {
     try {
@@ -87,23 +89,30 @@ const refreshPage = async () => {
     ]);
 };
 
-const searchSales = () => {
+const searchSales = async () => {
     filters.page = 1;
-    fetchSales();
+    await fetchSales();
 };
 
-const previousPage = () => {
+const previousPage = async () => {
     if (pagination.current_page > 1) {
-        filters.page--;
-        fetchSales();
+        filters.page = pagination.current_page - 1;
+        await fetchSales();
     }
 };
 
-const nextPage = () => {
+const nextPage = async () => {
     if (pagination.current_page < pagination.last_page) {
-        filters.page++;
-        fetchSales();
+        filters.page = pagination.current_page + 1;
+        await fetchSales();
     }
+};
+
+const goToPage = async (page) => {
+    if (page === pagination.current_page) return;
+
+    filters.page = page;
+    await fetchSales();
 };
 
 const viewSale = (sale) => {
@@ -114,6 +123,51 @@ const viewSale = (sale) => {
 const closeSaleDrawer = () => {
     selectedSale.value = null;
     showSaleDrawer.value = false;
+};
+
+const openGenerateScheduleModal = (sale) => {
+    selectedSale.value = sale;
+    showGenerateScheduleModal.value = true;
+};
+
+const closeGenerateScheduleModal = () => {
+    showGenerateScheduleModal.value = false;
+};
+
+const submitGenerateSchedule = async (form) => {
+    processing.value = true;
+
+    try {
+        await paymentScheduleService.generateSchedule(form);
+
+        toast.success("Payment schedule generated successfully.");
+
+        closeGenerateScheduleModal();
+
+        if (selectedSale.value) {
+            selectedSale.value = {
+                ...selectedSale.value,
+                schedule_refresh_key: Date.now(),
+            };
+        }
+
+        await fetchSummary();
+    } catch (error) {
+        console.error(error);
+
+        if (error.response?.data?.errors) {
+            const firstError = Object.values(error.response.data.errors)[0][0];
+            toast.error(firstError);
+            return;
+        }
+
+        toast.error(
+            error.response?.data?.message ||
+            "Failed to generate payment schedule."
+        );
+    } finally {
+        processing.value = false;
+    }
 };
 
 const cancelSale = async (sale) => {
@@ -131,6 +185,10 @@ const cancelSale = async (sale) => {
         toast.success("Sale cancelled successfully.");
 
         await refreshPage();
+
+        if (selectedSale.value?.id === sale.id) {
+            closeSaleDrawer();
+        }
     } catch (error) {
         console.error(error);
         toast.error(error.response?.data?.message || "Failed to cancel sale.");
@@ -191,6 +249,7 @@ onMounted(() => {
                 :total="pagination.total"
                 @previous="previousPage"
                 @next="nextPage"
+                @go-to-page="goToPage"
             />
         </div>
 
@@ -198,6 +257,14 @@ onMounted(() => {
             :show="showSaleDrawer"
             :sale="selectedSale"
             @close="closeSaleDrawer"
+            @generate-schedule="openGenerateScheduleModal"
+        />
+
+        <GenerateScheduleModal
+            :show="showGenerateScheduleModal"
+            :sale="selectedSale"
+            @close="closeGenerateScheduleModal"
+            @submit="submitGenerateSchedule"
         />
 
         <LoadingOverlay

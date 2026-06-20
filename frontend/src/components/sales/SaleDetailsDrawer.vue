@@ -1,16 +1,34 @@
 <script setup>
+import { ref, watch,computed } from "vue";
+
+import paymentScheduleService from "@/services/paymentScheduleService";
+import PaymentScheduleTable from "@/components/sales/PaymentScheduleTable.vue";
+
+import CollectionModal from "@/components/collections/CollectionModal.vue";
+import collectionService from "@/services/collectionService";
+import CollectionHistoryTable from "@/components/collections/CollectionHistoryTable.vue";
+
 import {
     X,
     User,
     UserCog,
     Building2,
-    MapPinned,
     CalendarDays,
     Wallet,
     FileText,
 } from "lucide-vue-next";
 
-defineProps({
+const showCollectionModal = ref(false);
+const selectedSchedule = ref(null);
+
+const collections = ref([]);
+const loadingCollections = ref(false);
+
+const hasSchedule = computed(() => {
+    return schedules.value.length > 0;
+});
+
+const props = defineProps({
     show: {
         type: Boolean,
         default: false,
@@ -22,7 +40,99 @@ defineProps({
     },
 });
 
-const emit = defineEmits(["close"]);
+const emit = defineEmits([
+    "close",
+    "generate-schedule",
+]);
+
+const schedules = ref([]);
+const loadingSchedules = ref(false);
+
+const openCollectionModal = (schedule) => {
+    selectedSchedule.value = schedule;
+    showCollectionModal.value = true;
+};
+
+const closeCollectionModal = () => {
+    selectedSchedule.value = null;
+    showCollectionModal.value = false;
+};
+
+const loadCollections = async () => {
+    if (!props.sale?.id) {
+        collections.value = [];
+        return;
+    }
+
+    loadingCollections.value = true;
+
+    try {
+        const response = await collectionService.getCollections({
+            sale_id: props.sale.id,
+            per_page: 500,
+        });
+
+        collections.value = response.data.data ?? [];
+    } catch (error) {
+        console.error(error);
+        collections.value = [];
+    } finally {
+        loadingCollections.value = false;
+    }
+};
+
+const submitCollection = async (form) => {
+    try {
+        await collectionService.createCollection(form);
+
+        closeCollectionModal();
+
+        await Promise.all([
+            loadSchedules(),
+            loadCollections(),
+        ]);
+    } catch (error) {
+        console.error(error);
+    }
+};
+
+
+const loadSchedules = async () => {
+    if (!props.sale?.id) {
+        schedules.value = [];
+        return;
+    }
+
+    loadingSchedules.value = true;
+
+    try {
+        const response = await paymentScheduleService.getSchedules({
+            sale_id: props.sale.id,
+            per_page: 500,
+        });
+
+        schedules.value = response.data.data ?? [];
+    } catch (error) {
+        console.error(error);
+        schedules.value = [];
+    } finally {
+        loadingSchedules.value = false;
+    }
+};
+
+watch(
+    () => [
+        props.sale?.id,
+        props.sale?.schedule_refresh_key,
+    ],
+    () => {
+        loadSchedules();
+        loadCollections();
+    },
+    {
+        immediate: true,
+    }
+);
 
 const formatMoney = (amount) => {
     return Number(amount || 0).toLocaleString("en-PH", {
@@ -72,38 +182,40 @@ const formatStatus = (status) => {
         enter-from-class="translate-x-full"
         leave-to-class="translate-x-full"
     >
-    <div
-        v-if="show"
-        class="fixed inset-y-0 right-0 z-[9999] w-full max-w-3xl overflow-y-auto border-l border-slate-200 bg-slate-50 shadow-2xl"
-    >
-        <div class="sticky top-0 z-10 border-b border-slate-200 bg-white">
-            <div class="bg-gradient-to-r from-emerald-700 to-emerald-600 px-6 py-5 text-white">
-                <div class="flex items-start justify-between gap-4">
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-wider text-emerald-100">
-                            Sale Details
-                        </p>
+        <div
+            v-if="show"
+            class="fixed inset-y-0 right-0 z-[9999] flex w-full max-w-3xl flex-col border-l border-slate-200 bg-slate-50 shadow-2xl"
+        >
+            <!-- Header -->
+            <div class="shrink-0 border-b border-slate-200 bg-white">
+                <div class="bg-gradient-to-r from-emerald-700 to-emerald-600 px-6 py-5 text-white">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-wider text-emerald-100">
+                                Sale Details
+                            </p>
 
-                        <h2 class="mt-1 text-2xl font-bold">
-                            {{ sale?.sale_no || "—" }}
-                        </h2>
+                            <h2 class="mt-1 text-2xl font-bold">
+                                {{ sale?.sale_no || "—" }}
+                            </h2>
 
-                        <p class="mt-1 text-sm text-emerald-100">
-                            {{ sale?.lot?.project?.project_name || "No project" }}
-                        </p>
+                            <p class="mt-1 text-sm text-emerald-100">
+                                {{ sale?.lot?.project?.project_name || "No project" }}
+                            </p>
+                        </div>
+
+                        <button
+                            @click="emit('close')"
+                            class="rounded-xl bg-white/10 p-2 text-white hover:bg-white/20"
+                        >
+                            <X class="h-5 w-5" />
+                        </button>
                     </div>
-
-                    <button
-                        @click="emit('close')"
-                        class="rounded-xl bg-white/10 p-2 text-white hover:bg-white/20"
-                    >
-                        <X class="h-5 w-5" />
-                    </button>
                 </div>
             </div>
-        </div>
 
-            <div class="space-y-6 p-6">
+            <!-- Body -->
+            <div class="flex-1 space-y-6 overflow-y-auto p-6">
                 <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                     <h3 class="mb-4 flex items-center gap-2 font-semibold text-slate-800">
                         <CalendarDays class="h-4 w-4" />
@@ -280,17 +392,17 @@ const formatStatus = (status) => {
                             <p class="mt-1 text-lg font-bold text-blue-900">
                                 {{ formatMoney(sale?.downpayment) }}
                             </p>
-                    </div>
+                        </div>
 
-    <div class="rounded-xl border border-amber-100 bg-amber-50 p-4">
-        <p class="text-xs font-semibold uppercase text-amber-700">
-            Balance
-        </p>
-        <p class="mt-1 text-lg font-bold text-amber-900">
-            {{ formatMoney(sale?.balance) }}
-        </p>
-    </div>
-</div>
+                        <div class="rounded-xl border border-amber-100 bg-amber-50 p-4">
+                            <p class="text-xs font-semibold uppercase text-amber-700">
+                                Balance
+                            </p>
+                            <p class="mt-1 text-lg font-bold text-amber-900">
+                                {{ formatMoney(sale?.balance) }}
+                            </p>
+                        </div>
+                    </div>
                 </section>
 
                 <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -331,16 +443,74 @@ const formatStatus = (status) => {
                     </p>
                 </section>
 
-                <div class="sticky bottom-0 border-t border-slate-200 bg-white px-6 py-4">
-                    <div class="flex justify-end gap-3">
-                        <button
-                            @click="emit('close')"
-                            class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                        >
-                            Close
-                        </button>
+                <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <div class="mb-4 flex items-center justify-between">
+                        <div>
+                            <h3 class="font-semibold text-slate-900">
+                                Payment Schedule
+                            </h3>
 
+                            <p class="text-sm text-slate-500">
+                                Monthly amortization schedule.
+                            </p>
+                        </div>
                     </div>
+
+                     <PaymentScheduleTable
+                        :schedules="schedules"
+                        :loading="loadingSchedules"
+                        @record-payment="openCollectionModal"
+                    />
+                </section>
+                <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <div class="mb-4">
+                        <h3 class="font-semibold text-slate-900">
+                            Collection History
+                        </h3>
+
+                        <p class="text-sm text-slate-500">
+                            Posted payments and official receipt records for this sale.
+                        </p>
+                    </div>
+
+                    <CollectionHistoryTable
+                        :collections="collections"
+                        :loading="loadingCollections"
+                    />
+                </section>
+            </div>
+
+            <CollectionModal
+                :show="showCollectionModal"
+                :sale="sale"
+                :schedule="selectedSchedule"
+                @close="closeCollectionModal"
+                @submit="submitCollection"
+            />
+
+            <!-- Footer -->
+            <div class="shrink-0 border-t border-slate-200 bg-white px-6 py-4">
+                <div class="flex justify-end gap-3">
+                    <span
+                        v-if="hasSchedule"
+                        class="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700"
+                    >
+                        Schedule Generated
+                    </span>
+                    <button
+                        v-if="sale?.status === 'active' && !hasSchedule"
+                        @click="emit('generate-schedule', sale)"
+                        class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+                    >
+                        Generate Schedule
+                    </button>
+
+                    <button
+                        @click="emit('close')"
+                        class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                        Close
+                    </button>
                 </div>
             </div>
         </div>
