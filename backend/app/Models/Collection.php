@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\User;
 
 class Collection extends Model
 {
@@ -21,6 +22,9 @@ class Collection extends Model
         'reference_no',
         'status',
         'remarks',
+        'voided_by',
+        'voided_at',
+        'void_reason',
     ];
 
     protected $casts = [
@@ -36,5 +40,10 @@ class Collection extends Model
     public function paymentSchedule(): BelongsTo
     {
         return $this->belongsTo(PaymentSchedule::class);
+    }
+
+    public function voidedBy()
+    {
+        return $this->belongsTo(User::class, 'voided_by');
     }
 }

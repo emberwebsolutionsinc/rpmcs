@@ -4,11 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreCollectionRequest;
+use App\Http\Requests\VoidCollectionRequest;
 use App\Models\Collection;
+use App\Models\Sale;
 use App\Services\CollectionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use App\Models\Sale;
 use Illuminate\Support\Carbon;
 
 class CollectionController extends Controller
@@ -24,6 +25,7 @@ class CollectionController extends Controller
                 'sale.client',
                 'sale.lot.project',
                 'paymentSchedule',
+                'voidedBy',
             ])
             ->when($request->sale_id, function ($query, $saleId) {
                 $query->where('sale_id', $saleId);
@@ -58,6 +60,7 @@ class CollectionController extends Controller
             'sale.client',
             'sale.lot.project',
             'paymentSchedule',
+            'voidedBy',
         ]);
 
         return response()->json([
@@ -65,9 +68,15 @@ class CollectionController extends Controller
         ]);
     }
 
-    public function void(Collection $collection): JsonResponse
-    {
-        $collection = $this->collectionService->void($collection);
+    public function void(
+        VoidCollectionRequest $request,
+        Collection $collection
+    ): JsonResponse {
+        $collection = $this->collectionService->void(
+            $collection,
+            $request->validated(),
+            $request->user()?->id
+        );
 
         return response()->json([
             'message' => 'Collection voided successfully.',
@@ -76,35 +85,35 @@ class CollectionController extends Controller
     }
 
     public function summary(): JsonResponse
-{
-    $today = Carbon::today();
+    {
+        $today = Carbon::today();
 
-    $startOfMonth = Carbon::now()->startOfMonth();
-    $endOfMonth = Carbon::now()->endOfMonth();
+        $startOfMonth = Carbon::now()->startOfMonth();
+        $endOfMonth = Carbon::now()->endOfMonth();
 
-    return response()->json([
-        'data' => [
-            'total_collected' => Collection::query()
-                ->where('status', 'posted')
-                ->sum('amount_paid'),
+        return response()->json([
+            'data' => [
+                'total_collected' => Collection::query()
+                    ->where('status', 'posted')
+                    ->sum('amount_paid'),
 
-            'today_collected' => Collection::query()
-                ->where('status', 'posted')
-                ->whereDate('payment_date', $today)
-                ->sum('amount_paid'),
+                'today_collected' => Collection::query()
+                    ->where('status', 'posted')
+                    ->whereDate('payment_date', $today)
+                    ->sum('amount_paid'),
 
-            'monthly_collected' => Collection::query()
-                ->where('status', 'posted')
-                ->whereBetween('payment_date', [
-                    $startOfMonth,
-                    $endOfMonth,
-                ])
-                ->sum('amount_paid'),
+                'monthly_collected' => Collection::query()
+                    ->where('status', 'posted')
+                    ->whereBetween('payment_date', [
+                        $startOfMonth,
+                        $endOfMonth,
+                    ])
+                    ->sum('amount_paid'),
 
-            'outstanding_balance' => Sale::query()
-                ->where('status', '!=', 'cancelled')
-                ->sum('balance'),
-        ],
-    ]);
-}
+                'outstanding_balance' => Sale::query()
+                    ->where('status', '!=', 'cancelled')
+                    ->sum('balance'),
+            ],
+        ]);
+    }
 }

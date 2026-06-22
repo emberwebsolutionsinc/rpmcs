@@ -90,52 +90,74 @@ class CollectionService
         });
     }
 
-    public function void(Collection $collection): Collection
-    {
-        return DB::transaction(function () use ($collection) {
-            if ($collection->status === 'voided') {
-                throw ValidationException::withMessages([
-                    'collection' => 'This collection is already voided.',
+        public function void(
+            Collection $collection,
+            array $data,
+            ?int $userId = null
+        ): Collection {
+            return DB::transaction(function () use ($collection, $data, $userId) {
+                if ($collection->status === 'voided') {
+                    throw ValidationException::withMessages([
+                        'collection' => 'This collection is already voided.',
+                    ]);
+                }
+
+                $sale = Sale::lockForUpdate()->findOrFail($collection->sale_id);
+
+                $schedule = null;
+
+                if ($collection->payment_schedule_id) {
+                    $schedule = PaymentSchedule::lockForUpdate()
+                        ->findOrFail($collection->payment_schedule_id);
+                }
+
+                $amount = (float) $collection->amount_paid;
+
+                if ($schedule) {
+                    $restoredPaid = max(
+                        0,
+                        (float) $schedule->amount_paid - $amount
+                    );
+
+                    $restoredBalance = (float) $schedule->balance + $amount;
+
+                    $scheduleStatus = 'partial';
+
+                    if ($restoredPaid <= 0) {
+                        $scheduleStatus = 'pending';
+                    }
+
+                    if ($restoredBalance <= 0) {
+                        $scheduleStatus = 'paid';
+                    }
+
+                    $schedule->update([
+                        'amount_paid' => $restoredPaid,
+                        'balance' => $restoredBalance,
+                        'status' => $scheduleStatus,
+                    ]);
+                }
+
+                $sale->update([
+                    'balance' => (float) $sale->balance + $amount,
+                    'status' => 'active',
                 ]);
-            }
 
-            $sale = Sale::lockForUpdate()->findOrFail($collection->sale_id);
-
-            $schedule = null;
-
-            if ($collection->payment_schedule_id) {
-                $schedule = PaymentSchedule::lockForUpdate()
-                    ->findOrFail($collection->payment_schedule_id);
-            }
-
-            $amount = (float) $collection->amount_paid;
-
-            if ($schedule) {
-                $restoredPaid = max(0, (float) $schedule->amount_paid - $amount);
-                $restoredBalance = (float) $schedule->balance + $amount;
-
-                $schedule->update([
-                    'amount_paid' => $restoredPaid,
-                    'balance' => $restoredBalance,
-                    'status' => $restoredPaid <= 0 ? 'pending' : 'partial',
+                $collection->update([
+                    'status' => 'voided',
+                    'voided_by' => $userId,
+                    'voided_at' => now(),
+                    'void_reason' => $data['void_reason'],
                 ]);
-            }
 
-            $sale->update([
-                'balance' => (float) $sale->balance + $amount,
-                'status' => 'active',
-            ]);
-
-            $collection->update([
-                'status' => 'voided',
-            ]);
-
-            return $collection->fresh([
-                'sale.client',
-                'paymentSchedule',
-            ]);
-        });
-    }
+                return $collection->fresh([
+                    'sale.client',
+                    'sale.lot.project',
+                    'paymentSchedule',
+                    'voidedBy',
+                ]);
+            });
+}
 
     protected function generateCollectionNo(): string
     {

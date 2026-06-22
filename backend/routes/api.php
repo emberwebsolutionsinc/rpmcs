@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\ReservationController;
 use App\Http\Controllers\Api\SaleController;
 use App\Http\Controllers\Api\PaymentScheduleController;
 use App\Http\Controllers\Api\CollectionController;
+use App\Http\Controllers\Api\OfficialReceiptController;
 
 Route::prefix('v1')->group(function () {
 
@@ -46,6 +47,11 @@ Route::prefix('v1')->group(function () {
         */
 
         Route::prefix('sales-management')->group(function () {
+
+            Route::get(
+                'collections/{collection}/print-or',
+                [OfficialReceiptController::class, 'print']
+            );
 
             Route::apiResource(
                 'reservations',

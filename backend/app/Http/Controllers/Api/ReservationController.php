@@ -16,45 +16,38 @@ class ReservationController extends Controller
         protected ReservationService $reservationService
     ) {}
 
-    public function index(Request $request): JsonResponse
-    {
-        $reservations = Reservation::query()
-            ->with([
-                'client',
-                'lot.project',
-                'lot.phase',
-                'lot.block',
-                'agent',
-            ])
-            ->when($request->status, function ($query, $status) {
-                $query->where('status', $status);
-            })
-            ->when($request->client_id, function ($query, $clientId) {
-                $query->where('client_id', $clientId);
-            })
-            ->when($request->lot_id, function ($query, $lotId) {
-                $query->where('lot_id', $lotId);
-            })
-            ->when($request->agent_id, function ($query, $agentId) {
-                $query->where('agent_id', $agentId);
-            })
-            ->when($request->search, function ($query, $search) {
+public function index(Request $request): JsonResponse
+{
+    $reservations = Reservation::query()
+        ->with([
+            'client',
+            'agent',
+            'lot.project',
+            'lot.phase',
+            'lot.block',
+        ])
+        ->when($request->search, function ($query, $search) {
+            $query->where(function ($query) use ($search) {
                 $query->where('reservation_no', 'like', "%{$search}%")
-                    ->orWhereHas('client', function ($clientQuery) use ($search) {
-                        $clientQuery->where('first_name', 'like', "%{$search}%")
+                    ->orWhereHas('client', function ($query) use ($search) {
+                        $query->where('first_name', 'like', "%{$search}%")
                             ->orWhere('last_name', 'like', "%{$search}%")
                             ->orWhere('client_code', 'like', "%{$search}%");
                     })
-                    ->orWhereHas('lot', function ($lotQuery) use ($search) {
-                        $lotQuery->where('lot_code', 'like', "%{$search}%")
-                            ->orWhere('lot_no', 'like', "%{$search}%");
+                    ->orWhereHas('lot', function ($query) use ($search) {
+                        $query->where('lot_no', 'like', "%{$search}%")
+                            ->orWhere('lot_code', 'like', "%{$search}%");
                     });
-            })
-            ->latest()
-            ->paginate($request->per_page ?? 10);
+            });
+        })
+        ->when($request->status, function ($query, $status) {
+            $query->where('status', $status);
+        })
+        ->latest()
+        ->paginate($request->per_page ?? 10);
 
-        return response()->json($reservations);
-    }
+    return response()->json($reservations);
+}
 
     public function store(StoreReservationRequest $request): JsonResponse
     {
