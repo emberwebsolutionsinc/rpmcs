@@ -22,7 +22,7 @@ defineProps({
     },
 });
 
-const emit = defineEmits(["close"]);
+const emit = defineEmits(["close", "convert"]);
 
 const formatMoney = (amount) => {
     return Number(amount || 0).toLocaleString("en-PH", {
@@ -324,10 +324,11 @@ const formatStatus = (status) => {
                         </button>
 
                         <button
-                            v-if="reservation?.status === 'active'"
+                            v-if="!['cancelled', 'converted_to_sale', 'converted', 'sold'].includes(reservation?.status)"
+                            @click="emit('convert', reservation)"
                             class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
                         >
-                            Convert To Sale
+                            Convert to Sale
                         </button>
                     </div>
                 </div>

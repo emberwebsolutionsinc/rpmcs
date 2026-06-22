@@ -1,14 +1,19 @@
 import Swal from "sweetalert2";
 
-export const confirmDelete = async (title = "Delete Record?") => {
+export const confirmDelete = async (message = "Are you sure?") => {
     const result = await Swal.fire({
-        title,
-        text: "This action cannot be undone.",
+        title: "Are you sure?",
+        text: message,
         icon: "warning",
         showCancelButton: true,
+        confirmButtonText: "Yes, proceed",
+        cancelButtonText: "Cancel",
         confirmButtonColor: "#dc2626",
         cancelButtonColor: "#64748b",
-        confirmButtonText: "Delete",
+        customClass: {
+            popup: "rpmcs-swal-popup",
+            container: "rpmcs-swal-container",
+        },
     });
 
     return result.isConfirmed;

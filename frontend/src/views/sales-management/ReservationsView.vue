@@ -3,10 +3,18 @@ import { computed, onMounted, ref } from "vue";
 
 import AppLayout from "@/layouts/AppLayout.vue";
 import ReservationTable from "@/components/sales-management/reservations/ReservationTable.vue";
-import reservationService from "@/services/reservationService";
+import ReservationModal from "@/components/reservations/ReservationModal.vue";
 import ConvertToSaleModal from "@/components/sales-management/reservations/ConvertToSaleModal.vue";
 import ReservationDetailsDrawer from "@/components/sales-management/reservations/ReservationDetailsDrawer.vue";
+
+import reservationService from "@/services/reservationService";
 import saleService from "@/services/saleService.js";
+import clientService from "@/services/clientService";
+import agentService from "@/services/agentService";
+import lotService from "@/services/lotService.js";
+
+import { confirmDelete } from "@/utils/swal";
+
 import toast from "@/utils/toast";
 
 import {
@@ -19,13 +27,117 @@ import {
 
 const reservations = ref([]);
 const loading = ref(false);
-
 const processing = ref(false);
+
+const showReservationModal = ref(false);
+const clients = ref([]);
+const agents = ref([]);
+const lots = ref([]);
+
 const showConvertModal = ref(false);
 const selectedReservation = ref(null);
 
 const showDetailsDrawer = ref(false);
 const selectedReservationDetails = ref(null);
+
+const fetchReservations = async () => {
+    loading.value = true;
+
+    try {
+        const response = await reservationService.getReservations({
+            per_page: 100,
+        });
+
+        reservations.value = response.data.data ?? [];
+    } catch (error) {
+        console.error("Failed to fetch reservations:", error);
+        toast.error("Failed to load reservations.");
+        reservations.value = [];
+    } finally {
+        loading.value = false;
+    }
+};
+const openConvertFromDrawer = (reservation) => {
+    closeDetailsDrawer();
+    openConvertModal(reservation);
+};
+
+const loadClients = async () => {
+    const response = await clientService.getClients({
+        per_page: 100,
+    });
+
+    clients.value = response.data.data ?? [];
+};
+
+const loadAgents = async () => {
+    const response = await agentService.getAgents({
+        per_page: 100,
+    });
+
+    agents.value = response.data.data ?? [];
+};
+
+const loadAvailableLots = async () => {
+    const response = await lotService.getLots({
+        status: "available",
+        per_page: 500,
+    });
+
+    lots.value = response.data.data ?? [];
+};
+
+const openCreateModal = async () => {
+    processing.value = true;
+
+    try {
+        await Promise.all([
+            loadClients(),
+            loadAgents(),
+            loadAvailableLots(),
+        ]);
+
+        showReservationModal.value = true;
+    } catch (error) {
+        console.error(error);
+        toast.error("Failed to load reservation form data.");
+    } finally {
+        processing.value = false;
+    }
+};
+
+const closeReservationModal = () => {
+    showReservationModal.value = false;
+};
+
+const submitReservation = async (form) => {
+    processing.value = true;
+
+    try {
+        await reservationService.createReservation(form);
+
+        toast.success("Reservation created successfully.");
+
+        closeReservationModal();
+
+        await fetchReservations();
+    } catch (error) {
+        console.error(error);
+
+        if (error.response?.data?.errors) {
+            const firstError = Object.values(error.response.data.errors)[0][0];
+            toast.error(firstError);
+            return;
+        }
+
+        toast.error(
+            error.response?.data?.message ||
+            "Failed to create reservation."
+        );
+    } finally {
+        processing.value = false;
+    }
+};
 
 const openConvertModal = (reservation) => {
     selectedReservation.value = reservation;
@@ -57,25 +169,12 @@ const submitConvertToSale = async (form) => {
             return;
         }
 
-        toast.error(error.response?.data?.message || "Failed to convert reservation to sale.");
+        toast.error(
+            error.response?.data?.message ||
+            "Failed to convert reservation to sale."
+        );
     } finally {
         processing.value = false;
-    }
-};
-
-const fetchReservations = async () => {
-    loading.value = true;
-
-    try {
-        const response = await reservationService.getReservations();
-        const payload = response.data;
-
-        reservations.value = payload.data ?? payload ?? [];
-    } catch (error) {
-        console.error("Failed to fetch reservations:", error);
-        reservations.value = [];
-    } finally {
-        loading.value = false;
     }
 };
 
@@ -95,10 +194,6 @@ const stats = computed(() => ({
     }).length,
 }));
 
-const openCreateModal = () => {
-    console.log("Open create reservation modal");
-};
-
 const handleView = (reservation) => {
     selectedReservationDetails.value = reservation;
     showDetailsDrawer.value = true;
@@ -113,17 +208,40 @@ const handleEdit = (reservation) => {
     console.log("Edit reservation:", reservation);
 };
 
-const handleCancel = (reservation) => {
-    console.log("Cancel reservation:", reservation);
-};
+const handleCancel = async (reservation) => {
+    const confirmed = await confirmDelete(
+        `Cancel reservation ${reservation.reservation_no}? This will make the lot available again.`
+    );
 
-onMounted(fetchReservations);
+    if (!confirmed) return;
+
+    processing.value = true;
+
+    try {
+        await reservationService.cancelReservation(reservation.id);
+
+        toast.success("Reservation cancelled successfully.");
+
+        await fetchReservations();
+    } catch (error) {
+        console.error(error);
+
+        toast.error(
+            error.response?.data?.message ||
+            "Failed to cancel reservation."
+        );
+    } finally {
+        processing.value = false;
+    }
+};
+onMounted(() => {
+    fetchReservations();
+});
 </script>
 
 <template>
     <AppLayout>
         <div class="space-y-6">
-            <!-- Page Header -->
             <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 class="text-2xl font-bold text-gray-900">
@@ -145,7 +263,6 @@ onMounted(fetchReservations);
                 </button>
             </div>
 
-            <!-- Statistics Cards -->
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
                     <div class="flex items-center justify-between">
@@ -220,7 +337,6 @@ onMounted(fetchReservations);
                 </div>
             </div>
 
-            <!-- Reservation Table -->
             <ReservationTable
                 :reservations="reservations"
                 :loading="loading"
@@ -228,6 +344,15 @@ onMounted(fetchReservations);
                 @edit="handleEdit"
                 @cancel="handleCancel"
                 @convert="openConvertModal"
+            />
+
+            <ReservationModal
+                :show="showReservationModal"
+                :clients="clients"
+                :agents="agents"
+                :lots="lots"
+                @close="closeReservationModal"
+                @submit="submitReservation"
             />
 
             <ConvertToSaleModal
@@ -241,6 +366,7 @@ onMounted(fetchReservations);
                 :show="showDetailsDrawer"
                 :reservation="selectedReservationDetails"
                 @close="closeDetailsDrawer"
+                @convert="openConvertFromDrawer"
             />
         </div>
     </AppLayout>

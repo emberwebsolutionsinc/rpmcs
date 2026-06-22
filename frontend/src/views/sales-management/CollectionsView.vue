@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from "vue";
+import { onMounted, reactive, ref } from "vue";
 
 import AppLayout from "@/layouts/AppLayout.vue";
 import PageHeader from "@/components/common/PageHeader.vue";
@@ -9,10 +9,11 @@ import LoadingOverlay from "@/components/common/LoadingOverlay.vue";
 
 import CollectionStatistics from "@/components/collections/CollectionStatistics.vue";
 import CollectionTable from "@/components/collections/CollectionTable.vue";
+import CollectionDetailsDrawer from "@/components/collections/CollectionDetailsDrawer.vue";
+import VoidCollectionModal from "@/components/collections/VoidCollectionModal.vue";
 
 import collectionService from "@/services/collectionService";
 import toast from "@/utils/toast";
-import { confirmDelete } from "@/utils/swal";
 
 import {
     Receipt,
@@ -22,6 +23,12 @@ import {
 const collections = ref([]);
 const loading = ref(false);
 const processing = ref(false);
+
+const showDetailsDrawer = ref(false);
+const selectedCollection = ref(null);
+
+const showVoidModal = ref(false);
+const selectedVoidCollection = ref(null);
 
 const filters = reactive({
     search: "",
@@ -43,37 +50,15 @@ const statistics = reactive({
     outstanding_balance: 0,
 });
 
-const formatMoney = (amount) => {
-    return Number(amount || 0).toLocaleString("en-PH", {
-        style: "currency",
-        currency: "PHP",
-        maximumFractionDigits: 0,
-    });
-};
+const fetchSummary = async () => {
+    try {
+        const response = await collectionService.getSummary();
 
-const computeStatisticsFromCurrentPage = () => {
-    const today = new Date().toISOString().slice(0, 10);
-    const currentMonth = new Date().toISOString().slice(0, 7);
-
-    const posted = collections.value.filter((item) => {
-        return item.status === "posted";
-    });
-
-    statistics.total_collected = posted.reduce((sum, item) => {
-        return sum + Number(item.amount_paid || 0);
-    }, 0);
-
-    statistics.today_collected = posted
-        .filter((item) => String(item.payment_date).slice(0, 10) === today)
-        .reduce((sum, item) => sum + Number(item.amount_paid || 0), 0);
-
-    statistics.monthly_collected = posted
-        .filter((item) => String(item.payment_date).slice(0, 7) === currentMonth)
-        .reduce((sum, item) => sum + Number(item.amount_paid || 0), 0);
-
-    statistics.outstanding_balance = posted.reduce((sum, item) => {
-        return sum + Number(item.sale?.balance || 0);
-    }, 0);
+        Object.assign(statistics, response.data.data);
+    } catch (error) {
+        console.error(error);
+        toast.error("Failed to load collection summary.");
+    }
 };
 
 const fetchCollections = async () => {
@@ -87,14 +72,19 @@ const fetchCollections = async () => {
         pagination.current_page = response.data.current_page ?? 1;
         pagination.last_page = response.data.last_page ?? 1;
         pagination.total = response.data.total ?? 0;
-
-        computeStatisticsFromCurrentPage();
     } catch (error) {
         console.error(error);
         toast.error("Failed to load collections.");
     } finally {
         loading.value = false;
     }
+};
+
+const refreshPage = async () => {
+    await Promise.all([
+        fetchSummary(),
+        fetchCollections(),
+    ]);
 };
 
 const searchCollections = async () => {
@@ -123,21 +113,43 @@ const goToPage = async (page) => {
     await fetchCollections();
 };
 
-const voidCollection = async (collection) => {
-    const confirmed = await confirmDelete(
-        `Void ${collection.collection_no}? This will restore the sale and installment balance.`
-    );
+const viewCollection = (collection) => {
+    selectedCollection.value = collection;
+    showDetailsDrawer.value = true;
+};
 
-    if (!confirmed) return;
+const closeDetailsDrawer = () => {
+    selectedCollection.value = null;
+    showDetailsDrawer.value = false;
+};
+
+const openVoidModal = (collection) => {
+    selectedVoidCollection.value = collection;
+    showVoidModal.value = true;
+};
+
+const closeVoidModal = () => {
+    selectedVoidCollection.value = null;
+    showVoidModal.value = false;
+};
+
+const submitVoidCollection = async (form) => {
+    if (!selectedVoidCollection.value) return;
 
     processing.value = true;
 
     try {
-        await collectionService.voidCollection(collection.id);
+        await collectionService.voidCollection(
+            selectedVoidCollection.value.id,
+            form
+        );
 
         toast.success("Collection voided successfully.");
 
-        await fetchCollections();
+        closeVoidModal();
+        closeDetailsDrawer();
+
+        await refreshPage();
     } catch (error) {
         console.error(error);
 
@@ -156,8 +168,33 @@ const voidCollection = async (collection) => {
     }
 };
 
+const printOR = async (collection) => {
+    processing.value = true;
+
+    try {
+        const response = await collectionService.printOR(collection.id);
+
+        const blob = new Blob([response.data], {
+            type: "application/pdf",
+        });
+
+        const url = window.URL.createObjectURL(blob);
+
+        window.open(url, "_blank");
+
+        setTimeout(() => {
+            window.URL.revokeObjectURL(url);
+        }, 10000);
+    } catch (error) {
+        console.error(error);
+        toast.error("Failed to generate official receipt.");
+    } finally {
+        processing.value = false;
+    }
+};
+
 onMounted(() => {
-    fetchCollections();
+    refreshPage();
 });
 </script>
 
@@ -225,7 +262,8 @@ onMounted(() => {
                 v-if="collections.length > 0 || loading"
                 :collections="collections"
                 :loading="loading"
-                @void="voidCollection"
+                @view="viewCollection"
+                @void="openVoidModal"
             />
 
             <EmptyState
@@ -245,6 +283,21 @@ onMounted(() => {
                 @go-to-page="goToPage"
             />
         </div>
+
+        <CollectionDetailsDrawer
+            :show="showDetailsDrawer"
+            :collection="selectedCollection"
+            @close="closeDetailsDrawer"
+            @print-or="printOR"
+            @void="openVoidModal"
+        />
+
+        <VoidCollectionModal
+            :show="showVoidModal"
+            :collection="selectedVoidCollection"
+            @close="closeVoidModal"
+            @submit="submitVoidCollection"
+        />
 
         <LoadingOverlay
             :show="processing"

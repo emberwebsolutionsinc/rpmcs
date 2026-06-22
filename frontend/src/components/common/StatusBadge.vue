@@ -11,6 +11,7 @@ const props = defineProps({
 const label = computed(() => {
     const labels = {
         paid: "Paid",
+        voided: "Void",
         partial: "Partial",
         active: "Active",
         cancelled: "Cancelled",
@@ -20,6 +21,7 @@ const label = computed(() => {
         sold: "Sold",
         converted_to_sale: "Converted",
         fully_paid: "Fully Paid",
+        posted: "Posted",
     };
 
     return labels[props.value] ?? props.value;
@@ -27,6 +29,8 @@ const label = computed(() => {
 
 const badgeClass = computed(() => {
     const classes = {
+        voided: "bg-red-100 text-red-800",
+        posted: "bg-green-100 text-green-800 border border-green-200",
         paid: "bg-green-100 text-green-800 border border-green-200",
         partial: "bg-yellow-100 text-yellow-800 border border-yellow-200",
         active: "bg-green-100 text-green-800",

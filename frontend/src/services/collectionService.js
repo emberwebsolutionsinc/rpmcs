@@ -19,9 +19,13 @@ export default {
         return api.post("/sales-management/collections", data);
     },
 
-    voidCollection(id) {
-        return api.patch(
-            `/sales-management/collections/${id}/void`
-        );
+voidCollection(id, data = {}) {
+    return api.patch(`/sales-management/collections/${id}/void`, data);
+},
+
+    printOR(id) {
+        return api.get(`/sales-management/collections/${id}/print-or`, {
+            responseType: "blob",
+        });
     },
 };

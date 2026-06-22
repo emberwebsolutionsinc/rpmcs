@@ -11,3 +11,11 @@ body {
     color: white;
     font-weight: 600;
 }
+
+.rpmcs-swal-container {
+    z-index: 999999 !important;
+}
+
+.rpmcs-swal-popup {
+    z-index: 1000000 !important;
+}

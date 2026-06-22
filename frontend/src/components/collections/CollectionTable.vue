@@ -161,6 +161,12 @@ const clientName = (collection) => {
                         <td class="px-6 py-4">
                             <div class="flex justify-end gap-2">
                                 <button
+                                    @click="$emit('view', collection)"
+                                    class="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-100"
+                                >
+                                    View
+                                </button>
+                                <button
                                     v-if="collection.status === 'posted'"
                                     @click="$emit('void', collection)"
                                     class="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-100"
