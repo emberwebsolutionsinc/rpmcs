@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\PaymentScheduleController;
 use App\Http\Controllers\Api\CollectionController;
 use App\Http\Controllers\Api\OfficialReceiptController;
 use App\Http\Controllers\Api\OverdueAccountController;
+use App\Http\Controllers\Api\Reports\CollectionReportController;
 
 
 Route::prefix('v1')->group(function () {
@@ -40,6 +41,13 @@ Route::prefix('v1')->group(function () {
                     ->orderBy('name')
                     ->get(),
             ]);
+        });
+
+        Route::prefix('reports')->group(function () {
+            Route::get(
+                'collections',
+                [CollectionReportController::class, 'index']
+            );
         });
 
         /*

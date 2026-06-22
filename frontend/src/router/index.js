@@ -24,6 +24,7 @@ import OverdueAccountsView from "@/views/sales-management/OverdueAccountsView.vu
 import CommissionsView from "@/views/commission-management/CommissionsView.vue";
 
 import ReportsView from "@/views/reports/ReportsView.vue";
+import CollectionReportView from "@/views/reports/CollectionReportView.vue";
 
 import UsersView from "@/views/administration/UsersView.vue";
 import RolesView from "@/views/administration/RolesView.vue";
@@ -195,6 +196,16 @@ const router = createRouter({
             meta: {
                 requiresAuth: true,
                 title: "Reports",
+            },
+        },
+
+        {
+            path: "/reports/collections",
+            name: "reports.collections",
+            component: CollectionReportView,
+            meta: {
+                requiresAuth: true,
+                title: "Collections Report",
             },
         },
 

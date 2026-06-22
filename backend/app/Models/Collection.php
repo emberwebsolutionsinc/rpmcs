@@ -46,4 +46,13 @@ class Collection extends Model
     {
         return $this->belongsTo(User::class, 'voided_by');
     }
+
+    public function voidedByUser()
+    {
+        return $this->belongsTo(User::class, 'voided_by');
+    }
+    public function createdByUser()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
 }
