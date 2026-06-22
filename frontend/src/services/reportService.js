@@ -10,4 +10,21 @@ export default {
             params,
         });
     },
+
+    exportCollectionReportExcel(params = {}) {
+        return api.get("/reports/collections/export-excel", {
+            params,
+            responseType: "blob",
+        });
+    },
+
+    exportCollectionReportPdf(params = {}) {
+        return api.get(
+            "/reports/collections/export-pdf",
+            {
+                params,
+                responseType: "blob",
+            }
+        );
+    },
 };

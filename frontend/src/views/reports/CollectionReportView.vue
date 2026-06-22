@@ -16,6 +16,10 @@ import { Search } from "lucide-vue-next";
 const collections = ref([]);
 const loading = ref(false);
 
+const printReport = () => {
+    window.print();
+};
+
 const filters = reactive({
     from_date: "",
     to_date: "",
@@ -40,6 +44,38 @@ const summary = reactive({
     net_collections: 0,
 });
 
+const exportPdf = async () => {
+    loading.value = true;
+
+    try {
+        const response = await reportService.exportCollectionReportPdf(filters);
+
+        const blob = new Blob([response.data], {
+            type: "application/pdf",
+        });
+
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+
+        link.href = url;
+        link.download = `collections-report-${new Date()
+            .toISOString()
+            .slice(0, 10)}.pdf`;
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error(error);
+        toast.error("Failed to export collection report PDF.");
+    } finally {
+        loading.value = false;
+    }
+};
+
+
 const fetchReport = async () => {
     loading.value = true;
 
@@ -62,6 +98,41 @@ const fetchReport = async () => {
         loading.value = false;
     }
 };
+
+const exportExcel = async () => {
+    loading.value = true;
+
+    try {
+        const response =
+            await reportService.exportCollectionReportExcel(filters);
+
+        const blob = new Blob([response.data], {
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        });
+
+        const url = window.URL.createObjectURL(blob);
+
+        const link = document.createElement("a");
+
+        link.href = url;
+        link.download = `collections-report-${new Date()
+            .toISOString()
+            .slice(0, 10)}.xlsx`;
+
+        document.body.appendChild(link);
+        link.click();
+
+        document.body.removeChild(link);
+
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error(error);
+        toast.error("Failed to export collection report.");
+    } finally {
+        loading.value = false;
+    }
+};
+
 
 const applyFilters = async () => {
     filters.page = 1;
@@ -204,6 +275,26 @@ onMounted(() => {
                         <option :value="25">25 rows</option>
                         <option :value="50">50 rows</option>
                     </select>
+
+                    <button
+                        @click="exportExcel"
+                        class="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+                    >
+                        Export Excel
+                    </button>
+                    <button
+                        @click="exportPdf"
+                        class="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700"
+                    >
+                        Export PDF
+                    </button>
+
+                    <button
+                        @click="printReport"
+                        class="rounded-lg bg-slate-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800"
+                    >
+                        Print
+                    </button>
 
                     <button
                         @click="resetFilters"

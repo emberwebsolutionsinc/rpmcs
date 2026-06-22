@@ -46,6 +46,17 @@ Route::prefix('v1')->group(function () {
         });
 
         Route::prefix('reports')->group(function () {
+
+            Route::get(
+            'collections/export-pdf',
+            [CollectionReportController::class, 'exportPdf']
+        );
+
+            Route::get(
+            'collections/export-excel',
+            [CollectionReportController::class, 'exportExcel']
+        );
+
             Route::get(
                 'collections',
                 [CollectionReportController::class, 'index']
