@@ -19,7 +19,7 @@ import SalesView from "@/views/sales-management/SalesView.vue";
 import PaymentsView from "@/views/collection-management/PaymentsView.vue";
 import ReceiptsView from "@/views/collection-management/ReceiptsView.vue";
 import CollectionsView from "@/views/sales-management/CollectionsView.vue";
-
+import OverdueAccountsView from "@/views/sales-management/OverdueAccountsView.vue";
 
 import CommissionsView from "@/views/commission-management/CommissionsView.vue";
 
@@ -145,6 +145,16 @@ const router = createRouter({
             meta: {
                 requiresAuth: true,
                 title: "Sales",
+            },
+        },
+
+        {
+            path: "/sales-management/overdue-accounts",
+            name: "overdue-accounts",
+            component: OverdueAccountsView,
+            meta: {
+                requiresAuth: true,
+                title: "Overdue Accounts",
             },
         },
 

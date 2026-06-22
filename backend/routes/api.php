@@ -20,6 +20,8 @@ use App\Http\Controllers\Api\SaleController;
 use App\Http\Controllers\Api\PaymentScheduleController;
 use App\Http\Controllers\Api\CollectionController;
 use App\Http\Controllers\Api\OfficialReceiptController;
+use App\Http\Controllers\Api\OverdueAccountController;
+
 
 Route::prefix('v1')->group(function () {
 
@@ -49,9 +51,25 @@ Route::prefix('v1')->group(function () {
         Route::prefix('sales-management')->group(function () {
 
             Route::get(
+                'top-delinquents',
+                [OverdueAccountController::class, 'topDelinquents']
+            );
+
+            Route::get(
                 'collections/{collection}/print-or',
                 [OfficialReceiptController::class, 'print']
             );
+
+            Route::get(
+                'overdue-accounts-summary',
+                [OverdueAccountController::class, 'summary']
+            );
+
+            Route::get(
+                'overdue-accounts',
+                [OverdueAccountController::class, 'index']
+            );
+
 
             Route::apiResource(
                 'reservations',

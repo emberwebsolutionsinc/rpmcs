@@ -17,6 +17,7 @@ import {
     Settings,
     ChevronDown,
     X,
+    AlertTriangle,
 } from "lucide-vue-next";
 
 defineProps({
@@ -338,6 +339,15 @@ const linkClass = (path) => {
                             >
                                 <Wallet class="h-4 w-4" />
                                 Collections
+                            </RouterLink>
+                            <RouterLink
+                                @click="$emit('close')"
+                                to="/sales-management/overdue-accounts"
+                                class="flex items-center gap-3 rounded-lg px-4 py-2 transition"
+                                :class="linkClass('/sales-management/overdue-accounts')"
+                            >
+                                <AlertTriangle class="h-4 w-4" />
+                                Overdue Accounts
                             </RouterLink>
                         </div>
                     </transition>

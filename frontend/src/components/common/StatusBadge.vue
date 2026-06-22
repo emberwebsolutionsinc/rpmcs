@@ -22,6 +22,7 @@ const label = computed(() => {
         converted_to_sale: "Converted",
         fully_paid: "Fully Paid",
         posted: "Posted",
+        overdue: "Overdue",
     };
 
     return labels[props.value] ?? props.value;
@@ -29,6 +30,7 @@ const label = computed(() => {
 
 const badgeClass = computed(() => {
     const classes = {
+        overdue: "bg-red-100 text-red-800 border border-red-200",
         voided: "bg-red-100 text-red-800",
         posted: "bg-green-100 text-green-800 border border-green-200",
         paid: "bg-green-100 text-green-800 border border-green-200",
