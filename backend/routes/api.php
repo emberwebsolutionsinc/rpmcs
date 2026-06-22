@@ -23,6 +23,8 @@ use App\Http\Controllers\Api\OfficialReceiptController;
 use App\Http\Controllers\Api\OverdueAccountController;
 use App\Http\Controllers\Api\Reports\CollectionReportController;
 
+use App\Http\Controllers\Api\Reports\ReportDashboardController;
+
 
 Route::prefix('v1')->group(function () {
 
@@ -47,6 +49,11 @@ Route::prefix('v1')->group(function () {
             Route::get(
                 'collections',
                 [CollectionReportController::class, 'index']
+            );
+
+            Route::get(
+                'dashboard',
+                [ReportDashboardController::class, 'index']
             );
         });
 

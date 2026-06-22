@@ -416,6 +416,17 @@ const linkClass = (path) => {
                             v-show="openMenus.reports"
                             class="ml-4 space-y-1 sm:ml-6"
                         >
+
+                             <RouterLink
+                                @click="$emit('close')"
+                                to="/reports/dashboard"
+                                class="flex items-center gap-3 rounded-lg px-4 py-2 transition"
+                                :class="linkClass('/reports/dashboard')"
+                            >
+                                <BarChart3 class="h-4 w-4" />
+                                Dashboard
+                            </RouterLink>
+                            
                             <RouterLink
                                 @click="$emit('close')"
                                 to="/reports"
@@ -425,6 +436,7 @@ const linkClass = (path) => {
                                 <BarChart3 class="h-4 w-4" />
                                 Reports
                             </RouterLink>
+    
                             <RouterLink
                                 @click="$emit('close')"
                                 to="/reports/collections"
