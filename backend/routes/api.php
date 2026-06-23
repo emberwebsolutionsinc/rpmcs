@@ -21,19 +21,16 @@ use App\Http\Controllers\Api\PaymentScheduleController;
 use App\Http\Controllers\Api\CollectionController;
 use App\Http\Controllers\Api\OfficialReceiptController;
 use App\Http\Controllers\Api\OverdueAccountController;
+
+use App\Http\Controllers\Api\Reports\ReportDashboardController;
 use App\Http\Controllers\Api\Reports\CollectionReportController;
 use App\Http\Controllers\Api\Reports\SaleReportController;
 use App\Http\Controllers\Api\Reports\AgingReportController;
 
-use App\Http\Controllers\Api\Reports\ReportDashboardController;
-
-
 Route::prefix('v1')->group(function () {
-
     Route::post('/login', [AuthController::class, 'login']);
 
     Route::middleware('auth:sanctum')->group(function () {
-
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/logout', [AuthController::class, 'logout']);
 
@@ -47,12 +44,65 @@ Route::prefix('v1')->group(function () {
             ]);
         });
 
+        /*
+        |--------------------------------------------------------------------------
+        | Reports
+        |--------------------------------------------------------------------------
+        */
+
         Route::prefix('reports')->group(function () {
+            Route::get(
+                'dashboard',
+                [ReportDashboardController::class, 'index']
+            );
+
+            /*
+            |--------------------------------------------------------------------------
+            | Collection Reports
+            |--------------------------------------------------------------------------
+            */
 
             Route::get(
-                'aging',
-                [AgingReportController::class, 'index']
+                'collections/export-excel',
+                [CollectionReportController::class, 'exportExcel']
             );
+
+            Route::get(
+                'collections/export-pdf',
+                [CollectionReportController::class, 'exportPdf']
+            );
+
+            Route::get(
+                'collections',
+                [CollectionReportController::class, 'index']
+            );
+
+            /*
+            |--------------------------------------------------------------------------
+            | Sales Reports
+            |--------------------------------------------------------------------------
+            */
+
+            Route::get(
+                'sales/export-excel',
+                [SaleReportController::class, 'exportExcel']
+            );
+
+            Route::get(
+                'sales/export-pdf',
+                [SaleReportController::class, 'exportPdf']
+            );
+
+            Route::get(
+                'sales',
+                [SaleReportController::class, 'index']
+            );
+
+            /*
+            |--------------------------------------------------------------------------
+            | Aging Reports
+            |--------------------------------------------------------------------------
+            */
 
             Route::get(
                 'aging/export-excel',
@@ -65,28 +115,8 @@ Route::prefix('v1')->group(function () {
             );
 
             Route::get(
-            'sales',
-            [SaleReportController::class, 'index']
-        );
-
-            Route::get(
-            'collections/export-pdf',
-            [CollectionReportController::class, 'exportPdf']
-        );
-
-            Route::get(
-            'collections/export-excel',
-            [CollectionReportController::class, 'exportExcel']
-        );
-
-            Route::get(
-                'collections',
-                [CollectionReportController::class, 'index']
-            );
-
-            Route::get(
-                'dashboard',
-                [ReportDashboardController::class, 'index']
+                'aging',
+                [AgingReportController::class, 'index']
             );
         });
 
@@ -97,7 +127,6 @@ Route::prefix('v1')->group(function () {
         */
 
         Route::prefix('sales-management')->group(function () {
-
             Route::get(
                 'top-delinquents',
                 [OverdueAccountController::class, 'topDelinquents']
@@ -117,7 +146,6 @@ Route::prefix('v1')->group(function () {
                 'overdue-accounts',
                 [OverdueAccountController::class, 'index']
             );
-
 
             Route::apiResource(
                 'reservations',
@@ -197,7 +225,6 @@ Route::prefix('v1')->group(function () {
         */
 
         Route::prefix('property-management')->group(function () {
-
             Route::apiResource(
                 'property-projects',
                 PropertyProjectController::class
