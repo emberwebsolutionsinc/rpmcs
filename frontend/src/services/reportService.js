@@ -27,4 +27,9 @@ export default {
             }
         );
     },
+    getSalesReport(params = {}) {
+        return api.get("/reports/sales", {
+            params,
+        });
+    },
 };

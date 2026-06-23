@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\CollectionController;
 use App\Http\Controllers\Api\OfficialReceiptController;
 use App\Http\Controllers\Api\OverdueAccountController;
 use App\Http\Controllers\Api\Reports\CollectionReportController;
+use App\Http\Controllers\Api\Reports\SaleReportController;
 
 use App\Http\Controllers\Api\Reports\ReportDashboardController;
 
@@ -46,6 +47,11 @@ Route::prefix('v1')->group(function () {
         });
 
         Route::prefix('reports')->group(function () {
+
+            Route::get(
+            'sales',
+            [SaleReportController::class, 'index']
+        );
 
             Route::get(
             'collections/export-pdf',
