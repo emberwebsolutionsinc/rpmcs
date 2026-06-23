@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 
 class LotService
 {
+
     public function create(array $data): Lot
     {
         return DB::transaction(function () use ($data) {
