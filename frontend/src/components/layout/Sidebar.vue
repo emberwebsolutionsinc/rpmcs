@@ -454,6 +454,15 @@ const linkClass = (path) => {
                                 <BarChart3 class="h-4 w-4" />
                                 Aging Report
                             </RouterLink>
+                             <RouterLink
+                                @click="$emit('close')"
+                                to="/reports/agent-commissions"
+                                class="flex items-center gap-3 rounded-lg px-4 py-2 transition"
+                                :class="linkClass('/reports/agent-commissions')"
+                            >
+                                <BarChart3 class="h-4 w-4" />
+                                Agent Commissions
+                            </RouterLink>
                         </div>
                     </transition>
 

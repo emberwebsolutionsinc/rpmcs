@@ -28,6 +28,7 @@ import CollectionReportView from "@/views/reports/CollectionReportView.vue";
 import ReportsDashboardView from "@/views/reports/ReportsDashboardView.vue";
 import SalesReportView from "@/views/reports/SaleReportView.vue";
 import AgingReportView from "@/views/reports/AgingReportView.vue";
+import AgentCommissionReportView from "@/views/reports/AgentCommissionReportView.vue";
 
 
 import UsersView from "@/views/administration/UsersView.vue";
@@ -200,7 +201,7 @@ const router = createRouter({
             meta: {
                 requiresAuth: true,
                 title: "Reports",
-            },
+            }, 
         },
 
         {
@@ -240,6 +241,16 @@ const router = createRouter({
             meta: {
                 requiresAuth: true,
                 title: "Aging Report",
+            },
+        },
+
+        {
+            path: "/reports/agent-commissions",
+            name: "reports.agent-commissions",
+            component: AgentCommissionReportView, 
+            meta: {
+                requiresAuth: true,
+                title: "Agent Commission Report",
             },
         },
 

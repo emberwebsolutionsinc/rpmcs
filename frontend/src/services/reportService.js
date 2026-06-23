@@ -64,4 +64,10 @@ export default {
             responseType: "blob",
         });
     },
+
+    getAgentCommissionReport(params = {}) {
+    return api.get("/reports/agent-commissions", {
+        params,
+    });
+},
 };
