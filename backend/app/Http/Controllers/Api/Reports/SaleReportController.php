@@ -8,6 +8,11 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
+use App\Exports\SaleReportExport;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+
 class SaleReportController extends Controller
 {
     public function index(Request $request): JsonResponse
@@ -162,4 +167,59 @@ class SaleReportController extends Controller
 
         return $query->get()->toArray();
     }
+
+
+    public function exportExcel(Request $request)
+{
+    return Excel::download(
+        new SaleReportExport($request->all()),
+        'sales-report.xlsx'
+    );
+}
+
+public function exportPdf(Request $request)
+{
+    $query = Sale::query()
+        ->with([
+            'client',
+            'property',
+            'agent',
+        ]);
+
+    if ($request->filled('date_from')) {
+        $query->whereDate('sale_date', '>=', $request->date_from);
+    }
+
+    if ($request->filled('date_to')) {
+        $query->whereDate('sale_date', '<=', $request->date_to);
+    }
+
+    if ($request->filled('status')) {
+        $query->where('status', $request->status);
+    }
+
+    if ($request->filled('agent_id')) {
+        $query->where('agent_id', $request->agent_id);
+    }
+
+    $sales = $query->latest('sale_date')->get();
+
+    $summary = [
+        'total_sales' => $sales->count(),
+        'total_contract_price' => $sales->sum('total_contract_price'),
+        'total_reservation_fee' => $sales->sum('reservation_fee'),
+        'total_downpayment' => $sales->sum('downpayment'),
+        'total_commission' => $sales->sum('commission_amount'),
+    ];
+
+    $pdf = Pdf::loadView('pdf.sale-report', [
+        'sales' => $sales,
+        'summary' => $summary,
+        'filters' => $request->all(),
+    ])->setPaper('a4', 'landscape');
+
+    return $pdf->download('sales-report.pdf');
+}
+
+
 }
