@@ -27,6 +27,8 @@ use App\Http\Controllers\Api\Reports\CollectionReportController;
 use App\Http\Controllers\Api\Reports\SaleReportController;
 use App\Http\Controllers\Api\Reports\AgingReportController;
 
+use App\Http\Controllers\Api\Reports\AgentCommissionReportController;
+
 Route::prefix('v1')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
 
@@ -117,6 +119,17 @@ Route::prefix('v1')->group(function () {
             Route::get(
                 'aging',
                 [AgingReportController::class, 'index']
+            );
+
+            /*
+            |--------------------------------------------------------------------------
+            | Agent Commission Reports
+            |--------------------------------------------------------------------------
+            */
+
+            Route::get(
+                'agent-commissions',
+                [AgentCommissionReportController::class, 'index']
             );
         });
 
