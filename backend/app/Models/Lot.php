@@ -36,17 +36,26 @@ class Lot extends Model
 
     public function project(): BelongsTo
     {
-        return $this->belongsTo(PropertyProject::class);
+        return $this->belongsTo(
+        PropertyProject::class,
+        'property_project_id'
+        );
     }
 
     public function phase(): BelongsTo
     {
-        return $this->belongsTo(ProjectPhase::class);
+         return $this->belongsTo(
+        ProjectPhase::class,
+        'project_phase_id'
+        );
     }
 
     public function block(): BelongsTo
     {
-        return $this->belongsTo(ProjectBlock::class, 'project_block_id');
+         return $this->belongsTo(
+        ProjectBlock::class,
+        'project_block_id'
+        );
     }
 
     public function propertyType(): BelongsTo
