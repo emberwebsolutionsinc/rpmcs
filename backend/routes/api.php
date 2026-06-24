@@ -130,7 +130,28 @@ Route::prefix('v1')->group(function () {
             Route::get(
                 'agent-commissions',
                 [AgentCommissionReportController::class, 'index']
-            );
+                            );
+
+                 /*
+                |--------------------------------------------------------------------------
+                | Agent Commission Reports
+                |--------------------------------------------------------------------------
+                */
+
+                Route::get(
+                    'agent-commissions/export-excel',
+                    [AgentCommissionReportController::class, 'exportExcel']
+                );
+
+                Route::get(
+                    'agent-commissions/export-pdf',
+                    [AgentCommissionReportController::class, 'exportPdf']
+                );
+
+                Route::get(
+                    'agent-commissions',
+                    [AgentCommissionReportController::class, 'index']
+                );
         });
 
         /*

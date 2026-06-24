@@ -69,5 +69,19 @@ export default {
     return api.get("/reports/agent-commissions", {
         params,
     });
-},
+    },
+
+    exportAgentCommissionReportExcel(params = {}) {
+        return api.get("/reports/agent-commissions/export-excel", {
+            params,
+            responseType: "blob",
+        });
+    },
+
+    exportAgentCommissionReportPdf(params = {}) {
+        return api.get("/reports/agent-commissions/export-pdf", {
+            params,
+            responseType: "blob",
+        });
+    },
 };

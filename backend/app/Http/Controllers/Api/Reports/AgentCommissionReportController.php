@@ -7,6 +7,11 @@ use App\Models\Agent;
 use App\Models\Sale;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Exports\AgentCommissionReportExport;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\Response;
+
 
 class AgentCommissionReportController extends Controller
 {
@@ -138,6 +143,80 @@ class AgentCommissionReportController extends Controller
 
         return $query;
     }
+
+        public function exportExcel(Request $request): Response
+        {
+            $filename = 'agent-commission-report-' . now()->format('Y-m-d-His') . '.xlsx';
+
+            return Excel::download(
+                new AgentCommissionReportExport($request->all()),
+                $filename
+            );
+        }
+
+public function exportPdf(Request $request)
+{
+    $sales = $this->filteredSales($request)
+        ->with([
+            'agent',
+            'client',
+            'lot.project',
+        ])
+        ->latest('sale_date')
+        ->latest('id')
+        ->get();
+
+    $agentRows = $sales
+        ->groupBy('agent_id')
+        ->map(function ($agentSales) {
+            $agent = $agentSales->first()?->agent;
+
+            $commissionRate = (float) ($agent?->default_commission_rate ?? 0);
+
+            $totalContractPrice = $agentSales->sum('contract_price');
+            $totalDownpayment = $agentSales->sum('downpayment');
+            $totalBalance = $agentSales->sum('balance');
+
+            $commissionEarned = $totalContractPrice * ($commissionRate / 100);
+
+            return [
+                'agent_code' => $agent?->agent_code ?? '—',
+                'agent_name' => $this->fullName($agent),
+                'agent_type' => $agent?->agent_type ?? '—',
+                'commission_rate' => $commissionRate,
+                'sales_count' => $agentSales->count(),
+                'total_contract_price' => $totalContractPrice,
+                'total_downpayment' => $totalDownpayment,
+                'total_balance' => $totalBalance,
+                'commission_earned' => $commissionEarned,
+                'commission_paid' => 0,
+                'commission_balance' => $commissionEarned,
+            ];
+        })
+        ->values();
+
+    $summary = [
+        'total_agents' => $agentRows->count(),
+        'total_sales' => $agentRows->sum('sales_count'),
+        'total_contract_price' => $agentRows->sum('total_contract_price'),
+        'total_downpayment' => $agentRows->sum('total_downpayment'),
+        'total_balance' => $agentRows->sum('total_balance'),
+        'gross_commission' => $agentRows->sum('commission_earned'),
+        'paid_commission' => $agentRows->sum('commission_paid'),
+        'unpaid_commission' => $agentRows->sum('commission_balance'),
+    ];
+
+    $pdf = Pdf::loadView('pdf.agent-commission-report', [
+        'summary' => $summary,
+        'agents' => $agentRows,
+        'sales' => $sales,
+        'filters' => $request->all(),
+    ])->setPaper('a4', 'landscape');
+
+    return $pdf->download(
+        'agent-commission-report-' . now()->format('Y-m-d-His') . '.pdf'
+    );
+}
 
     private function paginatedSales(Request $request)
     {
