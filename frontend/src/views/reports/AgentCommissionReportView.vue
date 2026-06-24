@@ -8,21 +8,30 @@ import Pagination from "@/components/common/Pagination.vue";
 import AgentCommissionSummary from "@/components/reports/AgentCommissionSummary.vue";
 import AgentCommissionTable from "@/components/reports/AgentCommissionTable.vue";
 import AgentCommissionSalesTable from "@/components/reports/AgentCommissionSalesTable.vue";
-
 import RecordCommissionPaymentModal from "@/components/reports/RecordCommissionPaymentModal.vue";
 import CommissionPaymentHistoryTable from "@/components/reports/CommissionPaymentHistoryTable.vue";
-import agentCommissionPaymentService from "@/services/agentCommissionPaymentService";
 
 import reportService from "@/services/reportService";
+import agentCommissionPaymentService from "@/services/agentCommissionPaymentService";
+import DeleteCommissionPaymentModal from "@/components/reports/DeleteCommissionPaymentModal.vue";
+
 import toast from "@/utils/toast";
 
 const loading = ref(false);
+const paymentsLoading = ref(false);
+const paymentProcessing = ref(false);
 
 const summary = ref({});
 const agents = ref([]);
-const sales = ref({
-    data: [],
-});
+const sales = ref({ data: [] });
+const payments = ref([]);
+
+const showDeleteModal = ref(false);
+const selectedPayment = ref(null);
+const deleteProcessing = ref(false);
+
+const selectedSale = ref(null);
+const showPaymentModal = ref(false);
 
 const filters = reactive({
     from_date: "",
@@ -39,100 +48,11 @@ const pagination = reactive({
     total: 0,
 });
 
-const payments = ref([]);
-const paymentsLoading = ref(false);
-
-const selectedSale = ref(null);
-const showPaymentModal = ref(false);
-const paymentProcessing = ref(false);
-
-const fetchPayments = async () => {
-    paymentsLoading.value = true;
-
-    try {
-        const response =
-            await agentCommissionPaymentService.getPayments({
-                per_page: 10,
-            });
-
-        payments.value = response.data.data?.data ?? [];
-    } catch (error) {
-        console.error(error);
-        toast.error("Failed to load commission payment history.");
-    } finally {
-        paymentsLoading.value = false;
-    }
-};
-
-const openPaymentModal = (sale) => {
-    selectedSale.value = sale;
-    showPaymentModal.value = true;
-};
-
-const closePaymentModal = () => {
-    selectedSale.value = null;
-    showPaymentModal.value = false;
-};
-
-const submitPayment = async (form) => {
-    paymentProcessing.value = true;
-
-    try {
-        await agentCommissionPaymentService.recordPayment(form);
-
-        toast.success("Commission payment recorded successfully.");
-
-        closePaymentModal();
-
-        await Promise.all([
-            fetchReport(),
-            fetchPayments(),
-        ]);
-    } catch (error) {
-        console.error(error);
-
-        if (error.response?.data?.errors) {
-            const firstError = Object.values(error.response.data.errors)[0][0];
-            toast.error(firstError);
-            return;
-        }
-
-        toast.error(
-            error.response?.data?.message ||
-            "Failed to record commission payment."
-        );
-    } finally {
-        paymentProcessing.value = false;
-    }
-};
-
-const deletePayment = async (payment) => {
-    if (!confirm("Delete this commission payment?")) {
-        return;
-    }
-
-    try {
-        await agentCommissionPaymentService.deletePayment(payment.id);
-
-        toast.success("Commission payment deleted successfully.");
-
-        await Promise.all([
-            fetchReport(),
-            fetchPayments(),
-        ]);
-    } catch (error) {
-        console.error(error);
-        toast.error("Failed to delete commission payment.");
-    }
-};
-
-
 const fetchReport = async () => {
     loading.value = true;
 
     try {
-        const response =
-            await reportService.getAgentCommissionReport(filters);
+        const response = await reportService.getAgentCommissionReport(filters);
 
         summary.value = response.data.summary ?? {};
         agents.value = response.data.agents ?? [];
@@ -147,6 +67,30 @@ const fetchReport = async () => {
     } finally {
         loading.value = false;
     }
+};
+
+const fetchPayments = async () => {
+    paymentsLoading.value = true;
+
+    try {
+        const response = await agentCommissionPaymentService.getPayments({
+            per_page: 10,
+        });
+
+        payments.value = response.data.data?.data ?? [];
+    } catch (error) {
+        console.error(error);
+        toast.error("Failed to load commission payment history.");
+    } finally {
+        paymentsLoading.value = false;
+    }
+};
+
+const refreshPage = async () => {
+    await Promise.all([
+        fetchReport(),
+        fetchPayments(),
+    ]);
 };
 
 const applyFilters = async () => {
@@ -183,6 +127,83 @@ const goToPage = async (page) => {
 
     filters.page = page;
     await fetchReport();
+};
+
+const openPaymentModal = (sale) => {
+    selectedSale.value = sale;
+    showPaymentModal.value = true;
+};
+
+const closePaymentModal = () => {
+    selectedSale.value = null;
+    showPaymentModal.value = false;
+};
+
+const submitPayment = async (form) => {
+    paymentProcessing.value = true;
+
+    try {
+        await agentCommissionPaymentService.recordPayment(form);
+
+        toast.success("Commission payment recorded successfully.");
+
+        closePaymentModal();
+
+        await refreshPage();
+    } catch (error) {
+        console.error(error);
+
+        if (error.response?.data?.errors) {
+            const firstError = Object.values(error.response.data.errors)[0][0];
+            toast.error(firstError);
+            return;
+        }
+
+        toast.error(
+            error.response?.data?.message ||
+            "Failed to record commission payment."
+        );
+    } finally {
+        paymentProcessing.value = false;
+    }
+};
+
+const deletePayment = (payment) => {
+    selectedPayment.value = payment;
+    showDeleteModal.value = true;
+};
+
+const confirmDeletePayment = async (
+    reason
+) => {
+    deleteProcessing.value = true;
+
+    try {
+        await agentCommissionPaymentService.deletePayment(
+            selectedPayment.value.id,
+            {
+                delete_reason: reason,
+            }
+        );
+
+        toast.success(
+            "Commission payment deleted successfully."
+        );
+
+        showDeleteModal.value = false;
+        selectedPayment.value = null;
+
+        await refreshPage();
+    } catch (error) {
+        console.error(error);
+
+        toast.error(
+            error.response?.data?.message ||
+            "Failed to delete commission payment."
+        );
+    } finally {
+        deleteProcessing.value = false;
+    }
 };
 
 const exportExcel = async () => {
@@ -253,7 +274,9 @@ const printReport = () => {
     window.print();
 };
 
-onMounted(fetchReport, fetchPayments);
+onMounted(() => {
+    refreshPage();
+});
 </script>
 
 <template>
@@ -264,9 +287,7 @@ onMounted(fetchReport, fetchPayments);
                 description="Monitor agent sales performance, commission rates, earned commissions, and unpaid commission exposure."
             />
 
-            <AgentCommissionSummary
-                :summary="summary"
-            />
+            <AgentCommissionSummary :summary="summary" />
 
             <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div class="grid gap-3 lg:grid-cols-5">
@@ -372,9 +393,7 @@ onMounted(fetchReport, fetchPayments);
                 </div>
             </div>
 
-            <AgentCommissionTable
-                :agents="agents"
-            />
+            <AgentCommissionTable :agents="agents" />
 
             <AgentCommissionSalesTable
                 :sales="sales"
@@ -393,6 +412,14 @@ onMounted(fetchReport, fetchPayments);
                 :processing="paymentProcessing"
                 @close="closePaymentModal"
                 @submit="submitPayment"
+            />
+
+            <DeleteCommissionPaymentModal
+                :show="showDeleteModal"
+                :payment="selectedPayment"
+                :processing="deleteProcessing"
+                @close="showDeleteModal = false"
+                @submit="confirmDeletePayment"
             />
 
             <Pagination

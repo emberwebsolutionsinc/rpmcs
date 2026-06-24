@@ -101,8 +101,23 @@ class AgentCommissionPaymentController extends Controller
         ], 201);
     }
 
-    public function destroy(AgentCommissionPayment $agentCommissionPayment): JsonResponse
-    {
+    public function destroy(
+        Request $request,
+        AgentCommissionPayment $agentCommissionPayment
+    ): JsonResponse {
+        $validated = $request->validate([
+            'delete_reason' => [
+                'required',
+                'string',
+                'min:5',
+            ],
+        ]);
+
+        $agentCommissionPayment->update([
+            'delete_reason' => $validated['delete_reason'],
+            'deleted_by' => $request->user()?->id,
+        ]);
+
         $agentCommissionPayment->delete();
 
         return response()->json([
