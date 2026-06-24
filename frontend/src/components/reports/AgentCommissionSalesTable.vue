@@ -6,6 +6,8 @@ defineProps({
     },
 });
 
+const emit = defineEmits(["record-payment"]);
+
 const money = (value) =>
     Number(value || 0).toLocaleString("en-PH", {
         style: "currency",
@@ -46,7 +48,19 @@ const money = (value) =>
                         </th>
 
                         <th class="px-4 py-3 text-right text-xs font-semibold uppercase">
-                            Commission
+                            Earned
+                        </th>
+
+                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase">
+                            Paid
+                        </th>
+
+                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase">
+                            Balance
+                        </th>
+
+                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase">
+                            Action
                         </th>
                     </tr>
                 </thead>
@@ -80,6 +94,30 @@ const money = (value) =>
 
                         <td class="px-4 py-4 text-right font-semibold text-green-700">
                             {{ money(sale.commission_earned) }}
+                        </td>
+
+                        <td class="px-4 py-4 text-right font-semibold text-blue-700">
+                            {{ money(sale.commission_paid) }}
+                        </td>
+
+                        <td class="px-4 py-4 text-right font-semibold text-red-700">
+                            {{ money(sale.commission_balance) }}
+                        </td>
+
+                        <td class="px-4 py-4 text-right">
+                            <button
+                                type="button"
+                                @click="emit('record-payment', sale)"
+                                class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700"
+                            >
+                                Record Payment
+                            </button>
+                        </td>
+                    </tr>
+
+                    <tr v-if="sales.data.length === 0">
+                        <td colspan="9" class="px-4 py-8 text-center text-sm text-slate-500">
+                            No commissionable sales found.
                         </td>
                     </tr>
                 </tbody>
