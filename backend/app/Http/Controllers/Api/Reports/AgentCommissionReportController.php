@@ -2,17 +2,16 @@
 
 namespace App\Http\Controllers\Api\Reports;
 
+use App\Exports\AgentCommissionReportExport;
 use App\Http\Controllers\Controller;
 use App\Models\Agent;
+use App\Models\AgentCommissionPayment;
 use App\Models\Sale;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use App\Exports\AgentCommissionReportExport;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\Response;
-use App\Models\AgentCommissionPayment;
-
 
 class AgentCommissionReportController extends Controller
 {
@@ -26,60 +25,59 @@ class AgentCommissionReportController extends Controller
             ])
             ->get();
 
-        $agentRows = $sales
-            ->groupBy('agent_id')
-            ->map(function ($agentSales) {
-                $firstSale = $agentSales->first();
-                $agent = $firstSale?->agent;
-
-                $commissionRate = (float) ($agent?->default_commission_rate ?? 0);
-
-                $totalContractPrice = $agentSales->sum('contract_price');
-                $totalDownpayment = $agentSales->sum('downpayment');
-                $totalBalance = $agentSales->sum('balance');
-
-                $commissionEarned = $totalContractPrice * ($commissionRate / 100);
-                $commissionPaid = AgentCommissionPayment::query()
-                    ->where('agent_id', $agent?->id)
-                    ->sum('amount');
-
-                $commissionBalance = $commissionEarned - $commissionPaid;
-
-                return [
-                    'agent_id' => $agent?->id,
-                    'agent_code' => $agent?->agent_code ?? '—',
-                    'agent_name' => $this->fullName($agent),
-                    'agent_type' => $agent?->agent_type ?? '—',
-                    'commission_rate' => $commissionRate,
-
-                    'sales_count' => $agentSales->count(),
-                    'total_contract_price' => $totalContractPrice,
-                    'total_downpayment' => $totalDownpayment,
-                    'total_balance' => $totalBalance,
-
-                    'commission_earned' => $commissionEarned,
-                    'commission_paid' => $commissionPaid,
-                    'commission_balance' => $commissionBalance,
-                ];
-            })
-            ->values();
-
-        $summary = [
-            'total_agents' => $agentRows->count(),
-            'total_sales' => $agentRows->sum('sales_count'),
-            'total_contract_price' => $agentRows->sum('total_contract_price'),
-            'total_downpayment' => $agentRows->sum('total_downpayment'),
-            'total_balance' => $agentRows->sum('total_balance'),
-            'gross_commission' => $agentRows->sum('commission_earned'),
-            'paid_commission' => $agentRows->sum('commission_paid'),
-            'unpaid_commission' => $agentRows->sum('commission_balance'),
-        ];
+        $agentRows = $this->buildAgentRows($sales);
 
         return response()->json([
-            'summary' => $summary,
+            'summary' => $this->buildSummary($agentRows),
             'agents' => $agentRows,
             'sales' => $this->paginatedSales($request),
         ]);
+    }
+
+    public function exportExcel(Request $request): Response
+    {
+        $filename = 'agent-commission-report-' . now()->format('Y-m-d-His') . '.xlsx';
+
+        return Excel::download(
+            new AgentCommissionReportExport($request->all()),
+            $filename
+        );
+    }
+
+    public function exportPdf(Request $request)
+    {
+        $sales = $this->filteredSales($request)
+            ->with([
+                'agent',
+                'client',
+                'lot.project',
+            ])
+            ->latest('sale_date')
+            ->latest('id')
+            ->get();
+
+        $agentRows = $this->buildAgentRows($sales);
+
+        $deletedPayments = AgentCommissionPayment::onlyTrashed()
+            ->with([
+                'agent',
+                'sale.client',
+                'deletedBy',
+            ])
+            ->latest('deleted_at')
+            ->get();
+
+        $pdf = Pdf::loadView('pdf.agent-commission-report', [
+            'summary' => $this->buildSummary($agentRows),
+            'agents' => $agentRows,
+            'sales' => $sales,
+            'deletedPayments' => $deletedPayments,
+            'filters' => $request->all(),
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->download(
+            'agent-commission-report-' . now()->format('Y-m-d-His') . '.pdf'
+        );
     }
 
     private function filteredSales(Request $request)
@@ -89,33 +87,19 @@ class AgentCommissionReportController extends Controller
             ->where('status', '!=', 'cancelled');
 
         if ($request->filled('from_date')) {
-            $query->whereDate(
-                'sale_date',
-                '>=',
-                $request->from_date
-            );
+            $query->whereDate('sale_date', '>=', $request->from_date);
         }
 
         if ($request->filled('to_date')) {
-            $query->whereDate(
-                'sale_date',
-                '<=',
-                $request->to_date
-            );
+            $query->whereDate('sale_date', '<=', $request->to_date);
         }
 
         if ($request->filled('agent_id')) {
-            $query->where(
-                'agent_id',
-                $request->agent_id
-            );
+            $query->where('agent_id', $request->agent_id);
         }
 
         if ($request->filled('status')) {
-            $query->where(
-                'status',
-                $request->status
-            );
+            $query->where('status', $request->status);
         }
 
         if ($request->filled('search')) {
@@ -148,79 +132,63 @@ class AgentCommissionReportController extends Controller
         return $query;
     }
 
-        public function exportExcel(Request $request): Response
-        {
-            $filename = 'agent-commission-report-' . now()->format('Y-m-d-His') . '.xlsx';
+    private function buildAgentRows($sales)
+    {
+        return $sales
+            ->groupBy('agent_id')
+            ->map(function ($agentSales) {
+                $agent = $agentSales->first()?->agent;
 
-            return Excel::download(
-                new AgentCommissionReportExport($request->all()),
-                $filename
-            );
-        }
+                $commissionRate = (float) ($agent?->default_commission_rate ?? 0);
+                $totalContractPrice = $agentSales->sum('contract_price');
+                $totalDownpayment = $agentSales->sum('downpayment');
+                $totalBalance = $agentSales->sum('balance');
 
-public function exportPdf(Request $request)
-{
-    $sales = $this->filteredSales($request)
-        ->with([
-            'agent',
-            'client',
-            'lot.project',
-        ])
-        ->latest('sale_date')
-        ->latest('id')
-        ->get();
+                $commissionEarned = $totalContractPrice * ($commissionRate / 100);
 
-    $agentRows = $sales
-        ->groupBy('agent_id')
-        ->map(function ($agentSales) {
-            $agent = $agentSales->first()?->agent;
+                $commissionPaid = AgentCommissionPayment::query()
+                    ->where('agent_id', $agent?->id)
+                    ->sum('amount');
 
-            $commissionRate = (float) ($agent?->default_commission_rate ?? 0);
+                $commissionDeleted = AgentCommissionPayment::onlyTrashed()
+                    ->where('agent_id', $agent?->id)
+                    ->sum('amount');
 
-            $totalContractPrice = $agentSales->sum('contract_price');
-            $totalDownpayment = $agentSales->sum('downpayment');
-            $totalBalance = $agentSales->sum('balance');
+                return [
+                    'agent_id' => $agent?->id,
+                    'agent_code' => $agent?->agent_code ?? '—',
+                    'agent_name' => $this->fullName($agent),
+                    'agent_type' => $agent?->agent_type ?? '—',
+                    'commission_rate' => $commissionRate,
 
-            $commissionEarned = $totalContractPrice * ($commissionRate / 100);
+                    'sales_count' => $agentSales->count(),
+                    'total_contract_price' => $totalContractPrice,
+                    'total_downpayment' => $totalDownpayment,
+                    'total_balance' => $totalBalance,
 
-            return [
-                'agent_code' => $agent?->agent_code ?? '—',
-                'agent_name' => $this->fullName($agent),
-                'agent_type' => $agent?->agent_type ?? '—',
-                'commission_rate' => $commissionRate,
-                'sales_count' => $agentSales->count(),
-                'total_contract_price' => $totalContractPrice,
-                'total_downpayment' => $totalDownpayment,
-                'total_balance' => $totalBalance,
-                'commission_earned' => $commissionEarned,
-                'commission_paid' => 0,
-                'commission_balance' => $commissionEarned,
-            ];
-        })
-        ->values();
+                    'commission_earned' => $commissionEarned,
+                    'commission_paid' => $commissionPaid,
+                    'commission_deleted' => $commissionDeleted,
+                    'commission_balance' => $commissionEarned - $commissionPaid,
+                ];
+            })
+            ->values();
+    }
 
-    $summary = [
-        'total_agents' => $agentRows->count(),
-        'total_sales' => $agentRows->sum('sales_count'),
-        'total_contract_price' => $agentRows->sum('total_contract_price'),
-        'total_downpayment' => $agentRows->sum('total_downpayment'),
-        'total_balance' => $agentRows->sum('total_balance'),
-        'gross_commission' => $agentRows->sum('commission_earned'),
-        'paid_commission' => $agentRows->sum('commission_paid'),
-        'unpaid_commission' => $agentRows->sum('commission_balance'),
-    ];
-
-    $pdf = Pdf::loadView('pdf.agent-commission-report', [
-        'summary' => $summary,
-        'agents' => $agentRows,
-        'sales' => $sales,
-        'filters' => $request->all(),
-    ])->setPaper('a4', 'landscape');
-
-    return $pdf->download(
-        'agent-commission-report-' . now()->format('Y-m-d-His') . '.pdf'
-    );
-}
+    private function buildSummary($agentRows): array
+    {
+        return [
+            'total_agents' => $agentRows->count(),
+            'total_sales' => $agentRows->sum('sales_count'),
+            'total_contract_price' => $agentRows->sum('total_contract_price'),
+            'total_downpayment' => $agentRows->sum('total_downpayment'),
+            'total_balance' => $agentRows->sum('total_balance'),
+            'gross_commission' => $agentRows->sum('commission_earned'),
+            'paid_commission' => $agentRows->sum('commission_paid'),
+            'deleted_commission' => $agentRows->sum('commission_deleted'),
+            'unpaid_commission' => $agentRows->sum('commission_balance'),
+        ];
+    }
 
     private function paginatedSales(Request $request)
     {
@@ -238,13 +206,18 @@ public function exportPdf(Request $request)
             $commissionRate = (float) ($sale->agent?->default_commission_rate ?? 0);
             $commissionEarned = (float) $sale->contract_price * ($commissionRate / 100);
 
-            $sale->commission_rate = $commissionRate;
-            $sale->commission_earned = $commissionEarned;
             $commissionPaid = AgentCommissionPayment::query()
                 ->where('sale_id', $sale->id)
                 ->sum('amount');
 
+            $commissionDeleted = AgentCommissionPayment::onlyTrashed()
+                ->where('sale_id', $sale->id)
+                ->sum('amount');
+
+            $sale->commission_rate = $commissionRate;
+            $sale->commission_earned = $commissionEarned;
             $sale->commission_paid = $commissionPaid;
+            $sale->commission_deleted = $commissionDeleted;
             $sale->commission_balance = $commissionEarned - $commissionPaid;
 
             return $sale;

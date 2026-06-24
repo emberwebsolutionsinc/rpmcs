@@ -2,6 +2,7 @@
 
 namespace App\Exports;
 
+use App\Models\AgentCommissionPayment;
 use App\Models\Sale;
 use Maatwebsite\Excel\Concerns\FromArray;
 
@@ -25,10 +26,6 @@ class AgentCommissionReportExport implements FromArray
 
         $rows = [];
 
-        $rows[] = ['RPMCS AGENT COMMISSION REPORT'];
-        $rows[] = ['Generated', now()->format('F d, Y h:i A')];
-        $rows[] = [];
-
         $agentRows = $sales
             ->groupBy('agent_id')
             ->map(function ($agentSales) {
@@ -37,6 +34,14 @@ class AgentCommissionReportExport implements FromArray
                 $rate = (float) ($agent?->default_commission_rate ?? 0);
                 $contractPrice = $agentSales->sum('contract_price');
                 $commission = $contractPrice * ($rate / 100);
+
+                $commissionPaid = AgentCommissionPayment::query()
+                    ->where('agent_id', $agent?->id)
+                    ->sum('amount');
+
+                $commissionDeleted = AgentCommissionPayment::onlyTrashed()
+                    ->where('agent_id', $agent?->id)
+                    ->sum('amount');
 
                 return [
                     'agent_code' => $agent?->agent_code ?? '—',
@@ -52,8 +57,9 @@ class AgentCommissionReportExport implements FromArray
                     'total_balance' => $agentSales->sum('balance'),
                     'commission_rate' => $rate,
                     'commission_earned' => $commission,
-                    'commission_paid' => 0,
-                    'commission_balance' => $commission,
+                    'commission_paid' => $commissionPaid,
+                    'commission_deleted' => $commissionDeleted,
+                    'commission_balance' => $commission - $commissionPaid,
                 ];
             })
             ->values();
@@ -65,9 +71,14 @@ class AgentCommissionReportExport implements FromArray
             'total_downpayment' => $agentRows->sum('total_downpayment'),
             'total_balance' => $agentRows->sum('total_balance'),
             'gross_commission' => $agentRows->sum('commission_earned'),
-            'paid_commission' => 0,
+            'paid_commission' => $agentRows->sum('commission_paid'),
+            'deleted_commission' => $agentRows->sum('commission_deleted'),
             'unpaid_commission' => $agentRows->sum('commission_balance'),
         ];
+
+        $rows[] = ['RPMCS AGENT COMMISSION REPORT'];
+        $rows[] = ['Generated', now()->format('F d, Y h:i A')];
+        $rows[] = [];
 
         $rows[] = [
             'Total Agents',
@@ -77,6 +88,7 @@ class AgentCommissionReportExport implements FromArray
             'Total Balance',
             'Gross Commission',
             'Paid Commission',
+            'Deleted Commission',
             'Unpaid Commission',
         ];
 
@@ -88,6 +100,7 @@ class AgentCommissionReportExport implements FromArray
             $summary['total_balance'],
             $summary['gross_commission'],
             $summary['paid_commission'],
+            $summary['deleted_commission'],
             $summary['unpaid_commission'],
         ];
 
@@ -104,6 +117,7 @@ class AgentCommissionReportExport implements FromArray
             'Rate',
             'Commission Earned',
             'Commission Paid',
+            'Deleted Commission',
             'Commission Balance',
         ];
 
@@ -119,6 +133,7 @@ class AgentCommissionReportExport implements FromArray
                 $agent['commission_rate'] . '%',
                 $agent['commission_earned'],
                 $agent['commission_paid'],
+                $agent['commission_deleted'],
                 $agent['commission_balance'],
             ];
         }
@@ -135,7 +150,10 @@ class AgentCommissionReportExport implements FromArray
             'Downpayment',
             'Balance',
             'Rate',
-            'Commission',
+            'Commission Earned',
+            'Commission Paid',
+            'Deleted Commission',
+            'Commission Balance',
         ];
 
         foreach ($sales as $sale) {
@@ -150,6 +168,14 @@ class AgentCommissionReportExport implements FromArray
             $rate = (float) ($sale->agent?->default_commission_rate ?? 0);
             $commission = (float) $sale->contract_price * ($rate / 100);
 
+            $commissionPaid = AgentCommissionPayment::query()
+                ->where('sale_id', $sale->id)
+                ->sum('amount');
+
+            $commissionDeleted = AgentCommissionPayment::onlyTrashed()
+                ->where('sale_id', $sale->id)
+                ->sum('amount');
+
             $rows[] = [
                 $sale->sale_no,
                 $clientName,
@@ -161,6 +187,54 @@ class AgentCommissionReportExport implements FromArray
                 $sale->balance,
                 $rate . '%',
                 $commission,
+                $commissionPaid,
+                $commissionDeleted,
+                $commission - $commissionPaid,
+            ];
+        }
+
+        $deletedPayments = AgentCommissionPayment::onlyTrashed()
+            ->with([
+                'agent',
+                'sale.client',
+                'deletedBy',
+            ])
+            ->latest('deleted_at')
+            ->get();
+
+        $rows[] = [];
+        $rows[] = ['DELETED / VOIDED COMMISSION PAYMENTS'];
+        $rows[] = [
+            'Deleted At',
+            'Agent',
+            'Sale No.',
+            'Client',
+            'Amount',
+            'Reason',
+            'Deleted By',
+        ];
+
+        foreach ($deletedPayments as $payment) {
+            $agentName = $payment->agent
+                ? trim(($payment->agent->first_name ?? '') . ' ' . ($payment->agent->last_name ?? ''))
+                : '—';
+
+            $clientName = $payment->sale?->client
+                ? trim(($payment->sale->client->first_name ?? '') . ' ' . ($payment->sale->client->last_name ?? ''))
+                : '—';
+
+            $deletedBy = $payment->deletedBy
+                ? ($payment->deletedBy->name ?? $payment->deletedBy->email ?? '—')
+                : '—';
+
+            $rows[] = [
+                optional($payment->deleted_at)->format('Y-m-d H:i'),
+                $agentName,
+                $payment->sale?->sale_no ?? '—',
+                $clientName,
+                $payment->amount,
+                $payment->delete_reason ?? '—',
+                $deletedBy,
             ];
         }
 

@@ -76,6 +76,7 @@
         table.data {
             width: 100%;
             border-collapse: collapse;
+            margin-bottom: 8px;
         }
 
         table.data th {
@@ -148,16 +149,23 @@
             </td>
 
             <td>
-                <div class="summary-label">Downpayment</div>
+                <div class="summary-label">Gross Commission</div>
                 <div class="summary-value">
-                    PHP {{ number_format($summary['total_downpayment'] ?? 0, 2) }}
+                    PHP {{ number_format($summary['gross_commission'] ?? 0, 2) }}
                 </div>
             </td>
 
             <td>
-                <div class="summary-label">Gross Commission</div>
+                <div class="summary-label">Paid</div>
                 <div class="summary-value">
-                    PHP {{ number_format($summary['gross_commission'] ?? 0, 2) }}
+                    PHP {{ number_format($summary['paid_commission'] ?? 0, 2) }}
+                </div>
+            </td>
+
+            <td>
+                <div class="summary-label">Deleted</div>
+                <div class="summary-value">
+                    PHP {{ number_format($summary['deleted_commission'] ?? 0, 2) }}
                 </div>
             </td>
 
@@ -185,12 +193,13 @@
                 <th class="center">Rate</th>
                 <th class="right">Earned</th>
                 <th class="right">Paid</th>
+                <th class="right">Deleted</th>
                 <th class="right">Balance</th>
             </tr>
         </thead>
 
         <tbody>
-            @foreach($agents as $agent)
+            @forelse($agents as $agent)
                 <tr>
                     <td>{{ $agent['agent_name'] ?? '—' }}</td>
                     <td>{{ $agent['agent_code'] ?? '—' }}</td>
@@ -200,9 +209,16 @@
                     <td class="center">{{ number_format($agent['commission_rate'] ?? 0, 2) }}%</td>
                     <td class="right">{{ number_format($agent['commission_earned'] ?? 0, 2) }}</td>
                     <td class="right">{{ number_format($agent['commission_paid'] ?? 0, 2) }}</td>
+                    <td class="right">{{ number_format($agent['commission_deleted'] ?? 0, 2) }}</td>
                     <td class="right">{{ number_format($agent['commission_balance'] ?? 0, 2) }}</td>
                 </tr>
-            @endforeach
+            @empty
+                <tr>
+                    <td colspan="10" class="center">
+                        No agent commission records found.
+                    </td>
+                </tr>
+            @endforelse
         </tbody>
     </table>
 
@@ -219,12 +235,15 @@
                 <th>Lot</th>
                 <th class="right">Contract</th>
                 <th class="center">Rate</th>
-                <th class="right">Commission</th>
+                <th class="right">Earned</th>
+                <th class="right">Paid</th>
+                <th class="right">Deleted</th>
+                <th class="right">Balance</th>
             </tr>
         </thead>
 
         <tbody>
-            @foreach($sales as $sale)
+            @forelse($sales as $sale)
                 @php
                     $clientName = $sale->client
                         ? trim(($sale->client->first_name ?? '') . ' ' . ($sale->client->last_name ?? ''))
@@ -236,6 +255,14 @@
 
                     $rate = (float) ($sale->agent?->default_commission_rate ?? 0);
                     $commission = (float) $sale->contract_price * ($rate / 100);
+
+                    $paid = \App\Models\AgentCommissionPayment::query()
+                        ->where('sale_id', $sale->id)
+                        ->sum('amount');
+
+                    $deleted = \App\Models\AgentCommissionPayment::onlyTrashed()
+                        ->where('sale_id', $sale->id)
+                        ->sum('amount');
                 @endphp
 
                 <tr>
@@ -246,13 +273,74 @@
                     <td class="right">{{ number_format($sale->contract_price, 2) }}</td>
                     <td class="center">{{ number_format($rate, 2) }}%</td>
                     <td class="right">{{ number_format($commission, 2) }}</td>
+                    <td class="right">{{ number_format($paid, 2) }}</td>
+                    <td class="right">{{ number_format($deleted, 2) }}</td>
+                    <td class="right">{{ number_format($commission - $paid, 2) }}</td>
                 </tr>
-            @endforeach
+            @empty
+                <tr>
+                    <td colspan="10" class="center">
+                        No commissionable sales found.
+                    </td>
+                </tr>
+            @endforelse
+        </tbody>
+    </table>
+
+    <div class="section-title">
+        Deleted / Voided Commission Payments
+    </div>
+
+    <table class="data">
+        <thead>
+            <tr>
+                <th>Deleted At</th>
+                <th>Agent</th>
+                <th>Sale No.</th>
+                <th>Client</th>
+                <th class="right">Amount</th>
+                <th>Reason</th>
+                <th>Deleted By</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @forelse($deletedPayments ?? [] as $payment)
+                @php
+                    $agentName = $payment->agent
+                        ? trim(($payment->agent->first_name ?? '') . ' ' . ($payment->agent->last_name ?? ''))
+                        : '—';
+
+                    $clientName = $payment->sale?->client
+                        ? trim(($payment->sale->client->first_name ?? '') . ' ' . ($payment->sale->client->last_name ?? ''))
+                        : '—';
+
+                    $deletedBy = $payment->deletedBy
+                        ? ($payment->deletedBy->name ?? $payment->deletedBy->email ?? '—')
+                        : '—';
+                @endphp
+
+                <tr>
+                    <td>{{ optional($payment->deleted_at)->format('Y-m-d H:i') }}</td>
+                    <td>{{ $agentName ?: '—' }}</td>
+                    <td>{{ $payment->sale?->sale_no ?? '—' }}</td>
+                    <td>{{ $clientName ?: '—' }}</td>
+                    <td class="right">{{ number_format($payment->amount, 2) }}</td>
+                    <td>{{ $payment->delete_reason ?? '—' }}</td>
+                    <td>{{ $deletedBy }}</td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="7" class="center">
+                        No deleted commission payments.
+                    </td>
+                </tr>
+            @endforelse
         </tbody>
     </table>
 
     <div class="footer">
-        This report was generated by RPMCS. Commission payment tracking is not yet enabled.
+        This report was generated by RPMCS. Deleted commission payments are shown for audit trail purposes.
     </div>
 </body>
 </html>
