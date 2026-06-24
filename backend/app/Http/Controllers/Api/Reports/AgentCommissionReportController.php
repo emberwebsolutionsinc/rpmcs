@@ -11,6 +11,7 @@ use App\Exports\AgentCommissionReportExport;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\Response;
+use App\Models\AgentCommissionPayment;
 
 
 class AgentCommissionReportController extends Controller
@@ -38,7 +39,10 @@ class AgentCommissionReportController extends Controller
                 $totalBalance = $agentSales->sum('balance');
 
                 $commissionEarned = $totalContractPrice * ($commissionRate / 100);
-                $commissionPaid = 0;
+                $commissionPaid = AgentCommissionPayment::query()
+                    ->where('agent_id', $agent?->id)
+                    ->sum('amount');
+
                 $commissionBalance = $commissionEarned - $commissionPaid;
 
                 return [
@@ -236,8 +240,12 @@ public function exportPdf(Request $request)
 
             $sale->commission_rate = $commissionRate;
             $sale->commission_earned = $commissionEarned;
-            $sale->commission_paid = 0;
-            $sale->commission_balance = $commissionEarned;
+            $commissionPaid = AgentCommissionPayment::query()
+                ->where('sale_id', $sale->id)
+                ->sum('amount');
+
+            $sale->commission_paid = $commissionPaid;
+            $sale->commission_balance = $commissionEarned - $commissionPaid;
 
             return $sale;
         });

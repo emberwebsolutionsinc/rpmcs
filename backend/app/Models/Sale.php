@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\AgentCommissionPayment;
 
 class Sale extends Model
 {
@@ -56,5 +57,9 @@ class Sale extends Model
         public function collections()
     {
         return $this->hasMany(Collection::class);
+    }
+    public function agentCommissionPayments(): HasMany
+    {
+        return $this->hasMany(AgentCommissionPayment::class);
     }
 }

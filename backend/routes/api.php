@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\Reports\CollectionReportController;
 use App\Http\Controllers\Api\Reports\SaleReportController;
 use App\Http\Controllers\Api\Reports\AgingReportController;
 
+use App\Http\Controllers\Api\AgentCommissionPaymentController;
 use App\Http\Controllers\Api\Reports\AgentCommissionReportController;
 
 Route::prefix('v1')->group(function () {
@@ -249,6 +250,28 @@ Route::prefix('v1')->group(function () {
             Route::patch(
                 'collections/{collection}/void',
                 [CollectionController::class, 'void']
+            );
+
+
+            /*
+            |--------------------------------------------------------------------------
+            | Agent Commission Payments
+            |--------------------------------------------------------------------------
+            */
+
+            Route::get(
+                'agent-commission-payments',
+                [AgentCommissionPaymentController::class, 'index']
+            );
+
+            Route::post(
+                'agent-commission-payments',
+                [AgentCommissionPaymentController::class, 'store']
+            );
+
+            Route::delete(
+                'agent-commission-payments/{agentCommissionPayment}',
+                [AgentCommissionPaymentController::class, 'destroy']
             );
         });
 
