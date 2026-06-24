@@ -39,41 +39,65 @@ class AgentCommissionPaymentController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'sale_id' => [
-                'required',
-                'exists:sales,id',
-            ],
-            'payment_date' => [
-                'required',
-                'date',
-            ],
-            'amount' => [
-                'required',
-                'numeric',
-                'min:1',
-            ],
-            'payment_method' => [
-                'nullable',
-                'string',
-                'max:100',
-            ],
-            'reference_no' => [
-                'nullable',
-                'string',
-                'max:100',
-            ],
-            'remarks' => [
-                'nullable',
-                'string',
-            ],
-        ]);
+       $validated = $request->validate([
+        'sale_id' => [
+            'required',
+            'exists:sales,id',
+        ],
+        'payment_date' => [
+            'required',
+            'date',
+        ],
+        'amount' => [
+            'required',
+            'numeric',
+            'min:1',
+        ],
+        'payment_method' => [
+            'required',
+            'string',
+            'max:100',
+        ],
+        'reference_no' => [
+            'required',
+            'string',
+            'max:100',
+        ],
+        'remarks' => [
+            'nullable',
+            'string',
+        ],
+    ]);
 
         $sale = Sale::query()
             ->with('agent')
             ->findOrFail($validated['sale_id']);
 
         if (! $sale->agent_id) {
+           $commissionRate = (float) ($sale->agent?->default_commission_rate ?? 0);
+
+            $commissionEarned = (float) $sale->contract_price * ($commissionRate / 100);
+
+            $commissionPaid = AgentCommissionPayment::query()
+                ->where('sale_id', $sale->id)
+                ->sum('amount');
+
+            $remainingCommission = max(
+                $commissionEarned - $commissionPaid,
+                0
+            );
+
+            if ((float) $validated['amount'] > $remainingCommission) {
+                return response()->json([
+                    'message' => 'Payment amount cannot exceed remaining commission balance.',
+                    'errors' => [
+                        'amount' => [
+                            'Maximum allowed payment is ₱' . number_format($remainingCommission, 2),
+                        ],
+                    ],
+                ], 422);
+            }
+
             return response()->json([
                 'message' => 'This sale has no assigned agent.',
             ], 422);

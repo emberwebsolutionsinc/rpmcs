@@ -10,7 +10,7 @@ defineProps({
     },
 });
 
-const emit = defineEmits(["delete"]);
+const emit = defineEmits(["delete","print-voucher"]);
 
 const money = (value) =>
     Number(value || 0).toLocaleString("en-PH", {
@@ -127,13 +127,25 @@ const date = (value) => {
                         </td>
 
                         <td class="px-4 py-4 text-right">
-                            <button
-                                type="button"
-                                @click="emit('delete', payment)"
-                                class="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100"
-                            >
-                                Delete
-                            </button>
+                           <td class="px-4 py-4 text-right">
+                            <div class="flex justify-end gap-2">
+                                <button
+                                    type="button"
+                                    @click="emit('print-voucher', payment)"
+                                    class="rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100"
+                                >
+                                    Print Voucher
+                                </button>
+
+                                <button
+                                    type="button"
+                                    @click="emit('delete', payment)"
+                                    class="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100"
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        </td>
                         </td>
                     </tr>
 

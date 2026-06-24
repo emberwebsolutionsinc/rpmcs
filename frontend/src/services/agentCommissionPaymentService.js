@@ -16,4 +16,13 @@ export default {
             data: payload,
         });
     },
+
+    printVoucher(id) {
+        return api.get(
+            `/sales-management/agent-commission-payments/${id}/voucher`,
+            {
+                responseType: "blob",
+            }
+        );
+    },
 };

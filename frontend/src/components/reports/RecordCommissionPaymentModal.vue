@@ -29,6 +29,12 @@ const form = reactive({
     remarks: "",
 });
 
+const errors = reactive({
+    amount: "",
+    payment_method: "",
+    reference_no: "",
+});
+
 watch(
     () => props.sale,
     (sale) => {
@@ -43,6 +49,33 @@ watch(
 );
 
 const submit = () => {
+    errors.amount = "";
+    errors.payment_method = "";
+    errors.reference_no = "";
+
+    const amount = Number(form.amount || 0);
+    const maxAmount = Number(props.sale?.commission_balance || 0);
+
+    if (amount <= 0) {
+        errors.amount = "Amount is required.";
+        return;
+    }
+
+    if (amount > maxAmount) {
+        errors.amount = `Amount must not exceed ₱${maxAmount.toLocaleString()}.`;
+        return;
+    }
+
+    if (!form.payment_method) {
+        errors.payment_method = "Payment method is required.";
+        return;
+    }
+
+    if (!form.reference_no.trim()) {
+        errors.reference_no = "Reference number is required.";
+        return;
+    }
+
     emit("submit", { ...form });
 };
 </script>
@@ -102,9 +135,22 @@ const submit = () => {
                         type="number"
                         step="0.01"
                         min="1"
+                        :max="sale?.commission_balance || 0"
                         placeholder="Example: 5000"
                         class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
                     />
+
+                    <p class="mt-1 text-xs text-slate-500">
+                        Maximum allowed:
+                        ₱{{ Number(sale?.commission_balance || 0).toLocaleString() }}
+                    </p>
+
+                    <p
+                        v-if="errors.amount"
+                        class="mt-1 text-xs font-medium text-red-600"
+                    >
+                        {{ errors.amount }}
+                    </p>
                 </div>
 
                 <div>
@@ -122,6 +168,12 @@ const submit = () => {
                         <option value="gcash">GCash</option>
                         <option value="check">Check</option>
                     </select>
+                    <p
+                        v-if="errors.payment_method"
+                        class="mt-1 text-xs font-medium text-red-600"
+                    >
+                        {{ errors.payment_method }}
+                    </p>
                 </div>
 
                 <div>
@@ -135,6 +187,13 @@ const submit = () => {
                         placeholder="OR, voucher, check, or transfer reference"
                         class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm"
                     />
+
+                    <p
+                        v-if="errors.reference_no"
+                        class="mt-1 text-xs font-medium text-red-600"
+                    >
+                        {{ errors.reference_no }}
+                    </p>
                 </div>
 
                 <div>

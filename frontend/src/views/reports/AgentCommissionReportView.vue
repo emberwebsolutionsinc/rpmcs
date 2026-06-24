@@ -69,6 +69,32 @@ const fetchReport = async () => {
     }
 };
 
+const printVoucher = async (payment) => {
+    try {
+        const response =
+            await agentCommissionPaymentService.printVoucher(payment.id);
+
+        const blob = new Blob([response.data], {
+            type: "application/pdf",
+        });
+
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+
+        link.href = url;
+        link.download = `commission-payment-voucher-${payment.id}.pdf`;
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error(error);
+        toast.error("Failed to print commission payment voucher.");
+    }
+};
+
 const fetchPayments = async () => {
     paymentsLoading.value = true;
 
@@ -404,6 +430,7 @@ onMounted(() => {
                 :payments="payments"
                 :loading="paymentsLoading"
                 @delete="deletePayment"
+                @print-voucher="printVoucher"
             />
 
             <RecordCommissionPaymentModal

@@ -105,7 +105,15 @@ const money = (value) =>
                         </td>
 
                         <td class="px-4 py-4 text-right">
+                            <span
+                                v-if="Number(sale.commission_balance || 0) <= 0"
+                                class="rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-semibold text-emerald-700"
+                            >
+                                Paid
+                            </span>
+
                             <button
+                                v-else
                                 type="button"
                                 @click="emit('record-payment', sale)"
                                 class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700"

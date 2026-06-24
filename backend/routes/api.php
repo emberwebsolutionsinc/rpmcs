@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\Reports\AgingReportController;
 
 use App\Http\Controllers\Api\AgentCommissionPaymentController;
 use App\Http\Controllers\Api\Reports\AgentCommissionReportController;
+use App\Http\Controllers\Api\CommissionPaymentVoucherController;
 
 Route::prefix('v1')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
@@ -250,6 +251,11 @@ Route::prefix('v1')->group(function () {
             Route::patch(
                 'collections/{collection}/void',
                 [CollectionController::class, 'void']
+            );
+
+            Route::get(
+                'agent-commission-payments/{payment}/voucher',
+                [CommissionPaymentVoucherController::class, 'print']
             );
 
 

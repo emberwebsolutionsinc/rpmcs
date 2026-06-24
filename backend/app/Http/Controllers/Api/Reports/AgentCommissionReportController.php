@@ -169,7 +169,7 @@ class AgentCommissionReportController extends Controller
                     'commission_earned' => $commissionEarned,
                     'commission_paid' => $commissionPaid,
                     'commission_deleted' => $commissionDeleted,
-                    'commission_balance' => $commissionEarned - $commissionPaid,
+                    'commission_balance' => max($commissionEarned - $commissionPaid, 0),
                 ];
             })
             ->values();
@@ -218,7 +218,7 @@ class AgentCommissionReportController extends Controller
             $sale->commission_earned = $commissionEarned;
             $sale->commission_paid = $commissionPaid;
             $sale->commission_deleted = $commissionDeleted;
-            $sale->commission_balance = $commissionEarned - $commissionPaid;
+            $sale->commission_balance = max($commissionEarned - $commissionPaid, 0);
 
             return $sale;
         });
