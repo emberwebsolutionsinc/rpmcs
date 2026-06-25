@@ -26,10 +26,13 @@ use App\Http\Controllers\Api\Reports\ReportDashboardController;
 use App\Http\Controllers\Api\Reports\CollectionReportController;
 use App\Http\Controllers\Api\Reports\SaleReportController;
 use App\Http\Controllers\Api\Reports\AgingReportController;
+use App\Http\Controllers\Api\Reports\CommissionPaymentReportController;
 
 use App\Http\Controllers\Api\AgentCommissionPaymentController;
 use App\Http\Controllers\Api\Reports\AgentCommissionReportController;
 use App\Http\Controllers\Api\CommissionPaymentVoucherController;
+
+
 
 Route::prefix('v1')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
@@ -154,6 +157,16 @@ Route::prefix('v1')->group(function () {
                     'agent-commissions',
                     [AgentCommissionReportController::class, 'index']
                 );
+
+  /*
+        |--------------------------------------------------------------------------
+        | Commission Payment Reports
+        |--------------------------------------------------------------------------
+        */
+                Route::get(
+                'commission-payments',
+                [CommissionPaymentReportController::class, 'index']
+            );
         });
 
         /*
