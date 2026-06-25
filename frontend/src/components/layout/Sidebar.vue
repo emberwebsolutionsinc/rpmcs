@@ -169,7 +169,6 @@ const linkClass = (path) => {
                         Dashboard
                     </RouterLink>
 
-                    <!-- Property Management -->
                     <button
                         @click="toggleMenu('property')"
                         class="flex w-full items-center justify-between rounded-lg px-4 py-3 transition"
@@ -237,7 +236,6 @@ const linkClass = (path) => {
                         </div>
                     </transition>
 
-                    <!-- Customer Management -->
                     <button
                         @click="toggleMenu('customer')"
                         class="flex w-full items-center justify-between rounded-lg px-4 py-3 transition"
@@ -285,7 +283,6 @@ const linkClass = (path) => {
                         </div>
                     </transition>
 
-                    <!-- Sales Management -->
                     <button
                         @click="toggleMenu('sales')"
                         class="flex w-full items-center justify-between rounded-lg px-4 py-3 transition"
@@ -340,6 +337,7 @@ const linkClass = (path) => {
                                 <Wallet class="h-4 w-4" />
                                 Collections
                             </RouterLink>
+
                             <RouterLink
                                 @click="$emit('close')"
                                 to="/sales-management/overdue-accounts"
@@ -352,7 +350,6 @@ const linkClass = (path) => {
                         </div>
                     </transition>
 
-                    <!-- Commission -->
                     <button
                         @click="toggleMenu('commissions')"
                         class="flex w-full items-center justify-between rounded-lg px-4 py-3 transition"
@@ -390,7 +387,6 @@ const linkClass = (path) => {
                         </div>
                     </transition>
 
-                    <!-- Reports -->
                     <button
                         @click="toggleMenu('reports')"
                         class="flex w-full items-center justify-between rounded-lg px-4 py-3 transition"
@@ -416,17 +412,16 @@ const linkClass = (path) => {
                             v-show="openMenus.reports"
                             class="ml-4 space-y-1 sm:ml-6"
                         >
-
-                             <RouterLink
+                            <RouterLink
                                 @click="$emit('close')"
                                 to="/reports/dashboard"
                                 class="flex items-center gap-3 rounded-lg px-4 py-2 transition"
                                 :class="linkClass('/reports/dashboard')"
                             >
                                 <BarChart3 class="h-4 w-4" />
-                                Dashboard
+                                Reports Dashboard
                             </RouterLink>
-    
+
                             <RouterLink
                                 @click="$emit('close')"
                                 to="/reports/collections"
@@ -436,6 +431,7 @@ const linkClass = (path) => {
                                 <BarChart3 class="h-4 w-4" />
                                 Collections Report
                             </RouterLink>
+
                             <RouterLink
                                 @click="$emit('close')"
                                 to="/reports/sales"
@@ -445,6 +441,7 @@ const linkClass = (path) => {
                                 <BarChart3 class="h-4 w-4" />
                                 Sales Report
                             </RouterLink>
+
                             <RouterLink
                                 @click="$emit('close')"
                                 to="/reports/aging"
@@ -454,24 +451,27 @@ const linkClass = (path) => {
                                 <BarChart3 class="h-4 w-4" />
                                 Aging Report
                             </RouterLink>
-                             <RouterLink
+
+                            <RouterLink
                                 @click="$emit('close')"
                                 to="/reports/agent-commissions"
                                 class="flex items-center gap-3 rounded-lg px-4 py-2 transition"
                                 :class="linkClass('/reports/agent-commissions')"
                             >
                                 <BarChart3 class="h-4 w-4" />
-                                Agent Commissions
+                                Agent Commission Report
                             </RouterLink>
-                             <RouterLink
+
+                            <RouterLink
                                 @click="$emit('close')"
                                 to="/reports/commission-payments"
                                 class="flex items-center gap-3 rounded-lg px-4 py-2 transition"
                                 :class="linkClass('/reports/commission-payments')"
                             >
                                 <BarChart3 class="h-4 w-4" />
-                                Commission Payments
+                                Commission Payment Report
                             </RouterLink>
+
                             <RouterLink
                                 @click="$emit('close')"
                                 to="/reports/agent-commission-ledger"
@@ -479,13 +479,11 @@ const linkClass = (path) => {
                                 :class="linkClass('/reports/agent-commission-ledger')"
                             >
                                 <BarChart3 class="h-4 w-4" />
-                               Agent Commission Ledger
+                                Agent Commission Ledger
                             </RouterLink>
-
                         </div>
                     </transition>
 
-                    <!-- Administration -->
                     <button
                         @click="toggleMenu('administration')"
                         class="flex w-full items-center justify-between rounded-lg px-4 py-3 transition"
@@ -519,6 +517,26 @@ const linkClass = (path) => {
                             >
                                 <Settings class="h-4 w-4" />
                                 Users
+                            </RouterLink>
+
+                            <RouterLink
+                                @click="$emit('close')"
+                                to="/administration/roles"
+                                class="flex items-center gap-3 rounded-lg px-4 py-2 transition"
+                                :class="linkClass('/administration/roles')"
+                            >
+                                <Settings class="h-4 w-4" />
+                                Roles
+                            </RouterLink>
+
+                            <RouterLink
+                                @click="$emit('close')"
+                                to="/administration/permissions"
+                                class="flex items-center gap-3 rounded-lg px-4 py-2 transition"
+                                :class="linkClass('/administration/permissions')"
+                            >
+                                <Settings class="h-4 w-4" />
+                                Permissions
                             </RouterLink>
                         </div>
                     </transition>

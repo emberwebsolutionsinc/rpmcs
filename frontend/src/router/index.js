@@ -15,24 +15,22 @@ import AgentsView from "@/views/agent-management/AgentsView.vue";
 
 import ReservationsView from "@/views/sales-management/ReservationsView.vue";
 import SalesView from "@/views/sales-management/SalesView.vue";
-
-import PaymentsView from "@/views/collection-management/PaymentsView.vue";
-import ReceiptsView from "@/views/collection-management/ReceiptsView.vue";
 import CollectionsView from "@/views/sales-management/CollectionsView.vue";
 import OverdueAccountsView from "@/views/sales-management/OverdueAccountsView.vue";
 
+import PaymentsView from "@/views/collection-management/PaymentsView.vue";
+import ReceiptsView from "@/views/collection-management/ReceiptsView.vue";
+
 import CommissionsView from "@/views/commission-management/CommissionsView.vue";
-import commissionPaymentReportView from "@/views/reports/CommissionPaymentReportView.vue";
-import AgentCommissionLedgerView from "@/views/reports/AgentCommissionLedgerView.vue";
-     
 
 import ReportsView from "@/views/reports/ReportsView.vue";
-import CollectionReportView from "@/views/reports/CollectionReportView.vue";
 import ReportsDashboardView from "@/views/reports/ReportsDashboardView.vue";
+import CollectionReportView from "@/views/reports/CollectionReportView.vue";
 import SalesReportView from "@/views/reports/SaleReportView.vue";
 import AgingReportView from "@/views/reports/AgingReportView.vue";
 import AgentCommissionReportView from "@/views/reports/AgentCommissionReportView.vue";
-
+import CommissionPaymentReportView from "@/views/reports/CommissionPaymentReportView.vue";
+import AgentCommissionLedgerView from "@/views/reports/AgentCommissionLedgerView.vue";
 
 import UsersView from "@/views/administration/UsersView.vue";
 import RolesView from "@/views/administration/RolesView.vue";
@@ -158,6 +156,16 @@ const router = createRouter({
         },
 
         {
+            path: "/sales-management/collections",
+            name: "collections",
+            component: CollectionsView,
+            meta: {
+                requiresAuth: true,
+                title: "Collections",
+            },
+        },
+
+        {
             path: "/sales-management/overdue-accounts",
             name: "overdue-accounts",
             component: OverdueAccountsView,
@@ -198,43 +206,8 @@ const router = createRouter({
         },
 
         {
-            path: "/reports/commission-payments",
-            name: "reports.commission-payments",
-            component: commissionPaymentReportView,
-             meta: {
-                requiresAuth: true,
-                title: "Commission Payment Report",
-            },
-        },
-
-        {
-            path: "/reports/agent-commission-ledger",
-            name: "reports.agent-commission-ledger",
-            component: AgentCommissionLedgerView,
-            meta: {
-                requiresAuth: true,
-                title: "Agent Commission Ledger",
-            },
-        },
-
-        {
             path: "/reports",
-            name: "reports",
-            component: ReportsView,
-            meta: {
-                requiresAuth: true,
-                title: "Reports",
-            }, 
-        },
-
-        {
-            path: "/reports/collections",
-            name: "reports.collections",
-            component: CollectionReportView,
-            meta: {
-                requiresAuth: true,
-                title: "Collections Report",
-            },
+            redirect: "/reports/dashboard",
         },
 
         {
@@ -248,9 +221,19 @@ const router = createRouter({
         },
 
         {
+            path: "/reports/collections",
+            name: "reports.collections",
+            component: CollectionReportView,
+            meta: {
+                requiresAuth: true,
+                title: "Collections Report",
+            },
+        },
+
+        {
             path: "/reports/sales",
             name: "reports.sales",
-           component: SalesReportView,
+            component: SalesReportView,
             meta: {
                 requiresAuth: true,
                 title: "Sales Report",
@@ -270,10 +253,30 @@ const router = createRouter({
         {
             path: "/reports/agent-commissions",
             name: "reports.agent-commissions",
-            component: AgentCommissionReportView, 
+            component: AgentCommissionReportView,
             meta: {
                 requiresAuth: true,
                 title: "Agent Commission Report",
+            },
+        },
+
+        {
+            path: "/reports/commission-payments",
+            name: "reports.commission-payments",
+            component: CommissionPaymentReportView,
+            meta: {
+                requiresAuth: true,
+                title: "Commission Payment Report",
+            },
+        },
+
+        {
+            path: "/reports/agent-commission-ledger",
+            name: "reports.agent-commission-ledger",
+            component: AgentCommissionLedgerView,
+            meta: {
+                requiresAuth: true,
+                title: "Agent Commission Ledger",
             },
         },
 
@@ -306,18 +309,6 @@ const router = createRouter({
                 title: "Permissions",
             },
         },
-
-        {
-            path: "/sales-management/collections",
-            name: "collections",
-            component:CollectionsView,
-            meta: {
-                requiresAuth: true,
-                title: "Collections",
-            },
-        },
-
-        
     ],
 });
 
