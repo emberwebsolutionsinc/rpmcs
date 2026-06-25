@@ -10,6 +10,7 @@ use App\Models\Sale;
 use App\Services\PaymentScheduleService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Carbon;
+use App\Models\AgentCommissionPayment;
 
 class ReportDashboardController extends Controller
 {
@@ -26,7 +27,68 @@ class ReportDashboardController extends Controller
         $startOfMonth = Carbon::now()->startOfMonth();
         $endOfMonth = Carbon::now()->endOfMonth();
 
+        $commissionSales = Sale::query()
+            ->with('agent')
+            ->whereNotNull('agent_id')
+            ->where('status', '!=', 'cancelled')
+            ->get();
+
+        $totalCommissionEarned = $commissionSales->sum(function ($sale) {
+            $rate = (float) ($sale->agent?->default_commission_rate ?? 0);
+
+            return (float) $sale->contract_price * ($rate / 100);
+        });
+
+        $totalCommissionPaid = AgentCommissionPayment::sum('amount');
+
+        $totalCommissionDeleted = AgentCommissionPayment::onlyTrashed()
+            ->sum('amount');
+
+        $totalCommissionBalance =
+            $totalCommissionEarned - $totalCommissionPaid;
+
+        $topAgent = $commissionSales
+            ->groupBy('agent_id')
+            ->map(function ($sales) {
+                $agent = $sales->first()?->agent;
+
+                $rate = (float) ($agent?->default_commission_rate ?? 0);
+
+                return [
+                    'agent_id' => $agent?->id,
+                    'agent_code' => $agent?->agent_code,
+                    'agent_name' => trim(
+                        ($agent?->first_name ?? '') . ' ' .
+                        ($agent?->last_name ?? '')
+                    ),
+                    'commission_earned' => $sales->sum(function ($sale) use ($rate) {
+                        return (float) $sale->contract_price * ($rate / 100);
+                    }),
+                ];
+            })
+            ->sortByDesc('commission_earned')
+            ->first();
+
+        $recentCommissionPayments = AgentCommissionPayment::query()
+            ->with([
+                'agent',
+                'sale.client',
+            ])
+            ->latest('payment_date')
+            ->latest('id')
+            ->limit(5)
+            ->get();
+
         return response()->json([
+            'commission_summary' => [
+                'total_commission_earned' => $totalCommissionEarned,
+                'total_commission_paid' => $totalCommissionPaid,
+                'total_commission_balance' => $totalCommissionBalance,
+                'total_commission_deleted' => $totalCommissionDeleted,
+                'top_agent' => $topAgent,
+                'recent_payments' => $recentCommissionPayments,
+            ],
+
             'data' => [
                 'today_collections' => Collection::query()
                     ->where('status', 'posted')
@@ -69,6 +131,7 @@ class ReportDashboardController extends Controller
                     ->whereIn('status', [
                         'active',
                         'reserved',
+
                     ])
                     ->count(),
 
