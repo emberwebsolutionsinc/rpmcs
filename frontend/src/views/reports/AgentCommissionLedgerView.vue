@@ -73,6 +73,84 @@ const fetchLedger = async () => {
     }
 };
 
+const exportExcel = async () => {
+    if (!filters.agent_id) {
+        toast.error("Please select an agent first.");
+        return;
+    }
+
+    loading.value = true;
+
+    try {
+        const response =
+            await reportService.exportAgentCommissionLedgerExcel(filters);
+
+        const blob = new Blob([response.data], {
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        });
+
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+
+        link.href = url;
+        link.download = `agent-commission-ledger-${new Date()
+            .toISOString()
+            .slice(0, 10)}.xlsx`;
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error(error);
+        toast.error("Failed to export agent commission ledger Excel.");
+    } finally {
+        loading.value = false;
+    }
+};
+
+const exportPdf = async () => {
+    if (!filters.agent_id) {
+        toast.error("Please select an agent first.");
+        return;
+    }
+
+    loading.value = true;
+
+    try {
+        const response =
+            await reportService.exportAgentCommissionLedgerPdf(filters);
+
+        const blob = new Blob([response.data], {
+            type: "application/pdf",
+        });
+
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+
+        link.href = url;
+        link.download = `agent-commission-ledger-${new Date()
+            .toISOString()
+            .slice(0, 10)}.pdf`;
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error(error);
+        toast.error("Failed to export agent commission ledger PDF.");
+    } finally {
+        loading.value = false;
+    }
+};
+
+const printReport = () => {
+    window.print();
+};
+
 const applyFilters = async () => {
     await fetchLedger();
 };
@@ -162,6 +240,26 @@ onMounted(fetchAgents);
                         class="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700"
                     >
                         Apply Filters
+                    </button>
+                    <button
+                        @click="exportExcel"
+                        class="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+                    >
+                        Export Excel
+                    </button>
+
+                    <button
+                        @click="exportPdf"
+                        class="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700"
+                    >
+                        Export PDF
+                    </button>
+
+                    <button
+                        @click="printReport"
+                        class="rounded-lg bg-slate-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800"
+                    >
+                        Print
                     </button>
                 </div>
             </div>

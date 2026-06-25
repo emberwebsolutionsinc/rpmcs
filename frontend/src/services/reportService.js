@@ -106,8 +106,22 @@ export default {
     },
 
     getAgentCommissionLedger(params = {}) {
-    return api.get("/reports/agent-commission-ledger", {
-        params,
-    });
-},
+        return api.get("/reports/agent-commission-ledger", {
+            params,
+        });
+    },
+
+    exportAgentCommissionLedgerExcel(params = {}) {
+        return api.get("/reports/agent-commission-ledger/export-excel", {
+            params,
+            responseType: "blob",
+        });
+    },
+
+    exportAgentCommissionLedgerPdf(params = {}) {
+        return api.get("/reports/agent-commission-ledger/export-pdf", {
+            params,
+            responseType: "blob",
+        });
+    },
 };

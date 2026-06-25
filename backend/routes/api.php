@@ -182,6 +182,21 @@ Route::prefix('v1')->group(function () {
                 'agent-commission-ledger',
                 [AgentCommissionLedgerController::class, 'index']
             );
+
+            Route::get(
+                'agent-commission-ledger/export-excel',
+                [AgentCommissionLedgerController::class, 'exportExcel']
+            );
+
+            Route::get(
+                'agent-commission-ledger/export-pdf',
+                [AgentCommissionLedgerController::class, 'exportPdf']
+            );
+
+            Route::get(
+                'agent-commission-ledger',
+                [AgentCommissionLedgerController::class, 'index']
+            );
         });
 
         /*
