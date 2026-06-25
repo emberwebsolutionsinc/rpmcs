@@ -184,7 +184,7 @@ const canConvert = (reservation) => {
 
                         <td class="whitespace-nowrap px-5 py-4">
                             <div class="font-medium text-gray-900">
-                                {{ reservation.lot?.lot_code || reservation.lot?.lot_no || "—" }}
+                                {{ reservation.lot?.lot_no || "No lot no." }}
                             </div>
 
                             <div class="text-xs text-gray-500">

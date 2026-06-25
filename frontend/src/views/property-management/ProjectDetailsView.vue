@@ -17,7 +17,6 @@ import toast from "@/utils/toast";
 
 import {
     ArrowLeft,
-    Building2,
     Layers3,
     Grid2X2,
     MapPinned,
@@ -45,16 +44,19 @@ const blocksCount = computed(() => project.value?.blocks?.length ?? 0);
 const lotsCount = computed(() => project.value?.lots?.length ?? 0);
 
 const availableLotsCount = computed(() => {
-    return project.value?.lots?.filter(
-        (lot) => lot.status === "available"
-    ).length ?? 0;
+    return (
+        project.value?.lots?.filter((lot) => lot.status === "available")
+            .length ?? 0
+    );
 });
 
 const loadProject = async () => {
     loading.value = true;
 
     try {
-        const response = await propertyProjectService.getProject(projectId.value);
+        const response = await propertyProjectService.getProject(
+            projectId.value
+        );
 
         project.value = response.data.data;
     } catch (error) {
@@ -63,6 +65,10 @@ const loadProject = async () => {
     } finally {
         loading.value = false;
     }
+};
+
+const goBackToProjects = () => {
+    router.push("/property-management/projects");
 };
 
 onMounted(() => {
@@ -75,8 +81,9 @@ onMounted(() => {
         <div class="space-y-6">
             <div class="flex items-start gap-3">
                 <button
-                    @click="router.push('/property-management/projects')"
+                    @click="goBackToProjects"
                     class="mt-1 rounded-lg border border-slate-300 bg-white p-2 text-slate-700 hover:bg-slate-50"
+                    title="Back to Projects"
                 >
                     <ArrowLeft class="h-5 w-5" />
                 </button>
@@ -99,6 +106,10 @@ onMounted(() => {
                     <h1 class="text-2xl font-bold text-slate-900 sm:text-3xl">
                         Project Details
                     </h1>
+
+                    <p class="mt-1 text-sm text-slate-500">
+                        Loading project information...
+                    </p>
                 </div>
             </div>
 
@@ -110,28 +121,28 @@ onMounted(() => {
                         title="Phases"
                         :value="phasesCount"
                         :icon="Layers3"
-                        helper="Total project phases"
+                        helper="Total phases inside this project"
                     />
 
                     <ModuleStatCard
                         title="Blocks"
                         :value="blocksCount"
                         :icon="Grid2X2"
-                        helper="Total project blocks"
+                        helper="Total blocks inside this project"
                     />
 
                     <ModuleStatCard
                         title="Lots"
                         :value="lotsCount"
                         :icon="MapPinned"
-                        helper="Total property lots"
+                        helper="Total lots inside this project"
                     />
 
                     <ModuleStatCard
                         title="Available"
                         :value="availableLotsCount"
                         :icon="CheckCircle2"
-                        helper="Available for sale"
+                        helper="Lots available for sale"
                     />
                 </div>
 
@@ -142,7 +153,7 @@ onMounted(() => {
                                 v-for="tab in tabs"
                                 :key="tab.key"
                                 @click="activeTab = tab.key"
-                                class="border-b-2 px-1 py-4 text-sm font-medium"
+                                class="border-b-2 px-1 py-4 text-sm font-medium whitespace-nowrap"
                                 :class="
                                     activeTab === tab.key
                                         ? 'border-emerald-600 text-emerald-700'
@@ -161,19 +172,19 @@ onMounted(() => {
                         />
 
                         <ProjectPhasesTab
-                            v-if="activeTab === 'phases'"
+                            v-else-if="activeTab === 'phases'"
                             :project="project"
                             @refresh="loadProject"
                         />
 
                         <ProjectBlocksTab
-                            v-if="activeTab === 'blocks'"
+                            v-else-if="activeTab === 'blocks'"
                             :project="project"
-                             @refresh="loadProject"
+                            @refresh="loadProject"
                         />
 
                         <ProjectLotsTab
-                            v-if="activeTab === 'lots'"
+                            v-else-if="activeTab === 'lots'"
                             :project="project"
                             @refresh="loadProject"
                         />

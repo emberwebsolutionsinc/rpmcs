@@ -5,9 +5,6 @@ import LoginView from "@/views/auth/LoginView.vue";
 import DashboardView from "@/views/dashboard/DashboardView.vue";
 
 import PropertyProjectsView from "@/views/property-management/PropertyProjectsView.vue";
-import ProjectPhasesView from "@/views/property-management/ProjectPhasesView.vue";
-import ProjectBlocksView from "@/views/property-management/ProjectBlocksView.vue";
-import LotsView from "@/views/property-management/LotsView.vue";
 import ProjectDetailsView from "@/views/property-management/ProjectDetailsView.vue";
 
 import ClientsView from "@/views/client-management/ClientsView.vue";
@@ -77,32 +74,17 @@ const router = createRouter({
 
         {
             path: "/property-management/phases",
-            name: "project-phases",
-            component: ProjectPhasesView,
-            meta: {
-                requiresAuth: true,
-                title: "Project Phases",
-            },
+            redirect: "/property-management/projects",
         },
 
         {
             path: "/property-management/blocks",
-            name: "project-blocks",
-            component: ProjectBlocksView,
-            meta: {
-                requiresAuth: true,
-                title: "Project Blocks",
-            },
+            redirect: "/property-management/projects",
         },
 
         {
             path: "/property-management/lots",
-            name: "lots",
-            component: LotsView,
-            meta: {
-                requiresAuth: true,
-                title: "Lots",
-            },
+            redirect: "/property-management/projects",
         },
 
         {
