@@ -104,4 +104,10 @@ export default {
             responseType: "blob",
         });
     },
+
+    getAgentCommissionLedger(params = {}) {
+    return api.get("/reports/agent-commission-ledger", {
+        params,
+    });
+},
 };

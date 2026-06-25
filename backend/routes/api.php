@@ -28,6 +28,7 @@ use App\Http\Controllers\Api\Reports\SaleReportController;
 use App\Http\Controllers\Api\Reports\AgingReportController;
 use App\Http\Controllers\Api\Reports\CommissionPaymentReportController;
 
+use App\Http\Controllers\Api\Reports\AgentCommissionLedgerController;
 use App\Http\Controllers\Api\AgentCommissionPaymentController;
 use App\Http\Controllers\Api\Reports\AgentCommissionReportController;
 use App\Http\Controllers\Api\CommissionPaymentVoucherController;
@@ -137,12 +138,6 @@ Route::prefix('v1')->group(function () {
                 [AgentCommissionReportController::class, 'index']
                             );
 
-                 /*
-                |--------------------------------------------------------------------------
-                | Agent Commission Reports
-                |--------------------------------------------------------------------------
-                */
-
                 Route::get(
                     'agent-commissions/export-excel',
                     [AgentCommissionReportController::class, 'exportExcel']
@@ -181,6 +176,11 @@ Route::prefix('v1')->group(function () {
             Route::get(
                 'commission-payments',
                 [CommissionPaymentReportController::class, 'index']
+            );
+
+            Route::get(
+                'agent-commission-ledger',
+                [AgentCommissionLedgerController::class, 'index']
             );
         });
 

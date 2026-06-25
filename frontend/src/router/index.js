@@ -23,6 +23,7 @@ import OverdueAccountsView from "@/views/sales-management/OverdueAccountsView.vu
 
 import CommissionsView from "@/views/commission-management/CommissionsView.vue";
 import commissionPaymentReportView from "@/views/reports/CommissionPaymentReportView.vue";
+import AgentCommissionLedgerView from "@/views/reports/AgentCommissionLedgerView.vue";
      
 
 import ReportsView from "@/views/reports/ReportsView.vue";
@@ -203,6 +204,16 @@ const router = createRouter({
              meta: {
                 requiresAuth: true,
                 title: "Commission Payment Report",
+            },
+        },
+
+        {
+            path: "/reports/agent-commission-ledger",
+            name: "reports.agent-commission-ledger",
+            component: AgentCommissionLedgerView,
+            meta: {
+                requiresAuth: true,
+                title: "Agent Commission Ledger",
             },
         },
 
