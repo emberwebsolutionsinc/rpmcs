@@ -22,6 +22,8 @@ import CollectionsView from "@/views/sales-management/CollectionsView.vue";
 import OverdueAccountsView from "@/views/sales-management/OverdueAccountsView.vue";
 
 import CommissionsView from "@/views/commission-management/CommissionsView.vue";
+import commissionPaymentReportView from "@/views/reports/CommissionPaymentReportView.vue";
+     
 
 import ReportsView from "@/views/reports/ReportsView.vue";
 import CollectionReportView from "@/views/reports/CollectionReportView.vue";
@@ -191,6 +193,16 @@ const router = createRouter({
             meta: {
                 requiresAuth: true,
                 title: "Commissions",
+            },
+        },
+
+        {
+            path: "/reports/commission-payments",
+            name: "reports.commission-payments",
+            component: commissionPaymentReportView,
+             meta: {
+                requiresAuth: true,
+                title: "Commission Payment Report",
             },
         },
 

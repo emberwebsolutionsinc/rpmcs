@@ -167,6 +167,21 @@ Route::prefix('v1')->group(function () {
                 'commission-payments',
                 [CommissionPaymentReportController::class, 'index']
             );
+
+            Route::get(
+                'commission-payments/export-excel',
+                [CommissionPaymentReportController::class, 'exportExcel']
+            );
+
+            Route::get(
+                'commission-payments/export-pdf',
+                [CommissionPaymentReportController::class, 'exportPdf']
+            );
+
+            Route::get(
+                'commission-payments',
+                [CommissionPaymentReportController::class, 'index']
+            );
         });
 
         /*

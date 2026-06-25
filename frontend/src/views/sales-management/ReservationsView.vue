@@ -29,6 +29,8 @@ const reservations = ref([]);
 const loading = ref(false);
 const processing = ref(false);
 
+const isEditMode = ref(false);
+
 const showReservationModal = ref(false);
 const clients = ref([]);
 const agents = ref([]);
@@ -206,6 +208,22 @@ const closeDetailsDrawer = () => {
 
 const handleEdit = (reservation) => {
     console.log("Edit reservation:", reservation);
+
+    isEditMode.value = true;
+
+    selectedReservation.value = reservation;
+
+    reservationForm.value = {
+        client_id: reservation.client_id || "",
+        lot_id: reservation.lot_id || "",
+        agent_id: reservation.agent_id || "",
+        reservation_date: reservation.reservation_date || "",
+        reservation_fee: reservation.reservation_fee || "",
+        status: reservation.status || "",
+        remarks: reservation.remarks || "",
+    };
+
+    showReservationModal.value = true;
 };
 
 const handleCancel = async (reservation) => {

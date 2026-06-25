@@ -84,4 +84,24 @@ export default {
             responseType: "blob",
         });
     },
+
+    getCommissionPaymentReport(params = {}) {
+        return api.get("/reports/commission-payments", {
+            params,
+        });
+    },
+
+    exportCommissionPaymentReportExcel(params = {}) {
+    return api.get("/reports/commission-payments/export-excel", {
+        params,
+        responseType: "blob",
+    });
+},
+
+    exportCommissionPaymentReportPdf(params = {}) {
+        return api.get("/reports/commission-payments/export-pdf", {
+            params,
+            responseType: "blob",
+        });
+    },
 };

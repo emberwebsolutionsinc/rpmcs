@@ -7,6 +7,11 @@ use App\Models\AgentCommissionPayment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+use App\Exports\CommissionPaymentReportExport;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\Response;
+
 class CommissionPaymentReportController extends Controller
 {
     public function index(Request $request): JsonResponse
@@ -155,5 +160,58 @@ class CommissionPaymentReportController extends Controller
             ($agent->middle_name ?? '') . ' ' .
             ($agent->last_name ?? '')
         ) ?: '—';
+    }
+
+    public function exportExcel(Request $request): Response
+    {
+        $filename = 'commission-payment-report-' . now()->format('Y-m-d-His') . '.xlsx';
+
+        return Excel::download(
+            new CommissionPaymentReportExport($request->all()),
+            $filename
+        );
+    }
+
+    public function exportPdf(Request $request)
+    {
+        $payments = $this->filteredQuery($request)
+            ->with([
+                'agent',
+                'sale.client',
+                'sale.lot.project',
+                'createdBy',
+            ])
+            ->latest('payment_date')
+            ->latest('id')
+            ->get();
+
+        $deletedPayments = $this->filteredQuery($request, true)
+            ->with([
+                'agent',
+                'sale.client',
+                'deletedBy',
+            ])
+            ->latest('deleted_at')
+            ->get();
+
+        $summary = [
+            'total_active_payments' => $payments->count(),
+            'total_active_amount' => $payments->sum('amount'),
+            'total_deleted_payments' => $deletedPayments->count(),
+            'total_deleted_amount' => $deletedPayments->sum('amount'),
+            'net_payment_count' => $payments->count(),
+            'net_payment_amount' => $payments->sum('amount'),
+        ];
+
+        $pdf = Pdf::loadView('pdf.commission-payment-report', [
+            'summary' => $summary,
+            'payments' => $payments,
+            'deletedPayments' => $deletedPayments,
+            'filters' => $request->all(),
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->download(
+            'commission-payment-report-' . now()->format('Y-m-d-His') . '.pdf'
+        );
     }
 }
