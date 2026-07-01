@@ -8,7 +8,7 @@ import PropertyProjectsView from "@/views/property-management/PropertyProjectsVi
 import ProjectDetailsView from "@/views/property-management/ProjectDetailsView.vue";
 
 import ClientsView from "@/views/client-management/ClientsView.vue";
-import AgentsView from "@/views/agent-management/AgentsView.vue";
+
 
 import ReservationsView from "@/views/sales-management/ReservationsView.vue";
 import SalesView from "@/views/sales-management/SalesView.vue";
@@ -28,6 +28,11 @@ import AgingReportView from "@/views/reports/AgingReportView.vue";
 import AgentCommissionReportView from "@/views/reports/AgentCommissionReportView.vue";
 import CommissionPaymentReportView from "@/views/reports/CommissionPaymentReportView.vue";
 import AgentCommissionLedgerView from "@/views/reports/AgentCommissionLedgerView.vue";
+
+import AgentsView from "@/views/agent-management/AgentsView.vue";
+import AgentDetailsView from "@/views/agent-management/AgentDetailsView.vue";
+
+
 
 import UsersView from "@/views/administration/UsersView.vue";
 import RolesView from "@/views/administration/RolesView.vue";
@@ -114,6 +119,16 @@ const router = createRouter({
             meta: {
                 requiresAuth: true,
                 title: "Agents",
+            },
+        },
+
+        {
+            path: "/agent-management/agents/:id",
+            name: "agent-details",
+            component: AgentDetailsView,
+            meta: {
+                requiresAuth: true,
+                title: "Agent Details",
             },
         },
 

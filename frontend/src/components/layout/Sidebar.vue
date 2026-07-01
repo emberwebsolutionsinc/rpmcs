@@ -33,6 +33,10 @@ const isActive = (path) => {
         return route.path.startsWith("/property-management/projects");
     }
 
+    if (path === "/agent-management/agents") {
+        return route.path.startsWith("/agent-management/agents");
+    }
+
     return route.path === path;
 };
 

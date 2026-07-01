@@ -126,7 +126,7 @@ const date = (value) => {
                             {{ payment.reference_no || "—" }}
                         </td>
 
-                        <td class="px-4 py-4 text-right">
+                        
                            <td class="px-4 py-4 text-right">
                             <div class="flex justify-end gap-2">
                                 <button
@@ -146,7 +146,7 @@ const date = (value) => {
                                 </button>
                             </div>
                         </td>
-                        </td>
+                      
                     </tr>
 
                     <tr v-if="!loading && payments.length === 0">

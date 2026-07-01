@@ -6,4 +6,8 @@ export default {
             params,
         });
     },
+
+    getAgent(id) {
+        return api.get(`/agent-management/agents/${id}`);
+    },
 };
