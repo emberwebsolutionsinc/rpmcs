@@ -10,4 +10,8 @@ export default {
     getAgent(id) {
         return api.get(`/agent-management/agents/${id}`);
     },
+
+    createAgent(payload) {
+    return api.post("/agent-management/agents", payload);
+    },
 };

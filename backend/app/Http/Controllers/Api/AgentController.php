@@ -52,7 +52,24 @@ class AgentController extends Controller
 
     public function store(StoreAgentRequest $request): JsonResponse
     {
-        $agent = $this->agentService->create($request->validated());
+        $validated = $request->validated();
+
+            if (!empty($validated['parent_agent_id'])) {
+                $parentAgent = Agent::query()->findOrFail($validated['parent_agent_id']);
+
+                if ($parentAgent->agent_type === 'sub_agent') {
+                    return response()->json([
+                        'message' => 'A sub-agent cannot have another sub-agent under them.',
+                        'errors' => [
+                            'parent_agent_id' => [
+                                'Only main agents may have sub-agents.',
+                            ],
+                        ],
+                    ], 422);
+                }
+            }
+
+            $agent = $this->agentService->create($validated);
 
         return response()->json([
             'message' => 'Agent created successfully.',

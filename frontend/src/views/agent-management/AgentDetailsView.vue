@@ -1,10 +1,11 @@
 <script setup>
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import AppLayout from "@/layouts/AppLayout.vue";
 import PageHeader from "@/components/common/PageHeader.vue";
 import TableSkeleton from "@/components/common/TableSkeleton.vue";
+import AddSubAgentModal from "@/components/agent-management/AddSubAgentModal.vue";
 
 import agentService from "@/services/agentService";
 import toast from "@/utils/toast";
@@ -19,6 +20,8 @@ const sales = ref([]);
 const payments = ref([]);
 const deletedPayments = ref([]);
 const subAgents = ref([]);
+const showAddSubAgentModal = ref(false);
+const savingSubAgent = ref(false);
 
 const activeTab = ref("dashboard");
 
@@ -32,6 +35,12 @@ const tabs = [
 ];
 
 const agentId = computed(() => route.params.id);
+
+const isSubAgent = computed(() => agent.value?.agent_type === "sub_agent");
+
+const canHaveSubAgents = computed(() => {
+    return agent.value && agent.value.agent_type !== "sub_agent";
+});
 
 const money = (value) =>
     Number(value || 0).toLocaleString("en-PH", {
@@ -115,6 +124,12 @@ const goBack = () => {
     router.push("/agent-management/agents");
 };
 
+const goToMainAgent = () => {
+    if (!agent.value?.main_agent?.id) return;
+
+    router.push(`/agent-management/agents/${agent.value.main_agent.id}`);
+};
+
 const goToLedger = () => {
     router.push({
         path: "/reports/agent-commission-ledger",
@@ -124,9 +139,47 @@ const goToLedger = () => {
     });
 };
 
+const openAddSubAgentModal = () => {
+    showAddSubAgentModal.value = true;
+};
+
+const closeAddSubAgentModal = () => {
+    showAddSubAgentModal.value = false;
+};
+
+const saveSubAgent = async (payload) => {
+    savingSubAgent.value = true;
+
+    try {
+        await agentService.createAgent(payload);
+
+        toast.success("Sub-agent added successfully.");
+        showAddSubAgentModal.value = false;
+
+        await loadAgent();
+    } catch (error) {
+        console.error(error);
+
+        const message =
+            error.response?.data?.message || "Failed to add sub-agent.";
+
+        toast.error(message);
+    } finally {
+        savingSubAgent.value = false;
+    }
+};
+
 onMounted(() => {
     loadAgent();
 });
+
+watch(
+    () => route.params.id,
+    async () => {
+        activeTab.value = "dashboard";
+        await loadAgent();
+    }
+);
 </script>
 
 <template>
@@ -139,6 +192,14 @@ onMounted(() => {
                 />
 
                 <div class="flex gap-2">
+                    <button
+                        v-if="agent?.main_agent"
+                        @click="goToMainAgent"
+                        class="rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+                    >
+                        View Main Agent
+                    </button>
+
                     <button
                         @click="goToLedger"
                         class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
@@ -172,6 +233,10 @@ onMounted(() => {
                                 {{ agent.agent_code || "—" }}
                                 ·
                                 {{ agent.agent_type?.replace("_", " ") || "—" }}
+                                <span v-if="agent.main_agent">
+                                    · Main Agent:
+                                    {{ fullName(agent.main_agent) }}
+                                </span>
                             </p>
                         </div>
 
@@ -288,7 +353,7 @@ onMounted(() => {
                                 </div>
                             </div>
 
-                            <div class="grid gap-6 xl:grid-cols-2">
+                            <div class="grid gap-6 xl:grid-cols-3">
                                 <div class="rounded-xl border border-slate-200 p-5">
                                     <h3 class="font-semibold text-slate-900">
                                         Agent Profile Summary
@@ -296,45 +361,35 @@ onMounted(() => {
 
                                     <div class="mt-4 space-y-3 text-sm">
                                         <div class="flex justify-between border-b pb-2">
-                                            <span class="text-slate-500">
-                                                Agent Type
-                                            </span>
+                                            <span class="text-slate-500">Agent Type</span>
                                             <span class="font-semibold capitalize">
                                                 {{ agent.agent_type?.replace("_", " ") || "—" }}
                                             </span>
                                         </div>
 
                                         <div class="flex justify-between border-b pb-2">
-                                            <span class="text-slate-500">
-                                                Main Agent
-                                            </span>
+                                            <span class="text-slate-500">Main Agent</span>
                                             <span class="font-semibold">
                                                 {{ fullName(agent.main_agent) }}
                                             </span>
                                         </div>
 
                                         <div class="flex justify-between border-b pb-2">
-                                            <span class="text-slate-500">
-                                                Commission Rate
-                                            </span>
+                                            <span class="text-slate-500">Commission Rate</span>
                                             <span class="font-semibold text-emerald-700">
                                                 {{ agent.default_commission_rate || 0 }}%
                                             </span>
                                         </div>
 
                                         <div class="flex justify-between border-b pb-2">
-                                            <span class="text-slate-500">
-                                                Contact
-                                            </span>
+                                            <span class="text-slate-500">Contact</span>
                                             <span class="font-semibold">
                                                 {{ agent.contact_number || "—" }}
                                             </span>
                                         </div>
 
                                         <div class="flex justify-between">
-                                            <span class="text-slate-500">
-                                                Email
-                                            </span>
+                                            <span class="text-slate-500">Email</span>
                                             <span class="font-semibold">
                                                 {{ agent.email || "—" }}
                                             </span>
@@ -349,40 +404,83 @@ onMounted(() => {
 
                                     <div class="mt-4 space-y-3 text-sm">
                                         <div class="flex justify-between border-b pb-2">
-                                            <span class="text-slate-500">
-                                                Earned
-                                            </span>
+                                            <span class="text-slate-500">Earned</span>
                                             <span class="font-semibold text-emerald-700">
                                                 {{ money(summary.total_commission_earned) }}
                                             </span>
                                         </div>
 
                                         <div class="flex justify-between border-b pb-2">
-                                            <span class="text-slate-500">
-                                                Paid
-                                            </span>
+                                            <span class="text-slate-500">Paid</span>
                                             <span class="font-semibold text-blue-700">
                                                 {{ money(summary.total_commission_paid) }}
                                             </span>
                                         </div>
 
                                         <div class="flex justify-between border-b pb-2">
-                                            <span class="text-slate-500">
-                                                Deleted / Voided
-                                            </span>
+                                            <span class="text-slate-500">Deleted / Voided</span>
                                             <span class="font-semibold text-orange-700">
                                                 {{ money(summary.total_commission_deleted) }}
                                             </span>
                                         </div>
 
                                         <div class="flex justify-between">
-                                            <span class="text-slate-500">
-                                                Balance
-                                            </span>
+                                            <span class="text-slate-500">Balance</span>
                                             <span class="font-bold text-red-700">
                                                 {{ money(summary.total_commission_balance) }}
                                             </span>
                                         </div>
+                                    </div>
+                                </div>
+
+                                <div class="rounded-xl border border-slate-200 p-5">
+                                    <h3 class="font-semibold text-slate-900">
+                                        Agent Hierarchy
+                                    </h3>
+
+                                    <div class="mt-4 space-y-3 text-sm">
+                                        <div class="flex justify-between border-b pb-2">
+                                            <span class="text-slate-500">Current Level</span>
+                                            <span class="font-semibold capitalize">
+                                                {{ agent.agent_type?.replace("_", " ") || "—" }}
+                                            </span>
+                                        </div>
+
+                                        <div class="flex justify-between border-b pb-2">
+                                            <span class="text-slate-500">Main Agent</span>
+                                            <span class="font-semibold">
+                                                {{ fullName(agent.main_agent) }}
+                                            </span>
+                                        </div>
+
+                                        <div class="flex justify-between border-b pb-2">
+                                            <span class="text-slate-500">Sub-Agent Count</span>
+                                            <span class="font-semibold">
+                                                {{ subAgents.length }}
+                                            </span>
+                                        </div>
+
+                                        <div class="flex justify-between">
+                                            <span class="text-slate-500">Can Have Sub-Agents?</span>
+                                            <span
+                                                class="rounded-full px-3 py-1 text-xs font-semibold"
+                                                :class="
+                                                    canHaveSubAgents
+                                                        ? 'bg-emerald-100 text-emerald-700'
+                                                        : 'bg-red-100 text-red-700'
+                                                "
+                                            >
+                                                {{ canHaveSubAgents ? "Yes" : "No" }}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        v-if="isSubAgent"
+                                        class="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800"
+                                    >
+                                        This agent is a sub-agent. Sub-agents cannot
+                                        create or own another sub-agent.
                                     </div>
                                 </div>
                             </div>
@@ -481,21 +579,11 @@ onMounted(() => {
                             <table class="min-w-full divide-y divide-slate-200">
                                 <thead class="bg-slate-50">
                                     <tr>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">
-                                            Sale
-                                        </th>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">
-                                            Client / Property
-                                        </th>
-                                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase text-slate-500">
-                                            Contract
-                                        </th>
-                                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase text-slate-500">
-                                            Commission Status
-                                        </th>
-                                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase text-slate-500">
-                                            Sale Status
-                                        </th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">Sale</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">Client / Property</th>
+                                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase text-slate-500">Contract</th>
+                                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase text-slate-500">Commission Status</th>
+                                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase text-slate-500">Sale Status</th>
                                     </tr>
                                 </thead>
 
@@ -505,18 +593,12 @@ onMounted(() => {
                                         :key="sale.sale_id"
                                     >
                                         <td class="px-4 py-4">
-                                            <p class="font-semibold text-slate-900">
-                                                {{ sale.sale_no }}
-                                            </p>
-                                            <p class="text-xs text-slate-500">
-                                                {{ date(sale.sale_date) }}
-                                            </p>
+                                            <p class="font-semibold text-slate-900">{{ sale.sale_no }}</p>
+                                            <p class="text-xs text-slate-500">{{ date(sale.sale_date) }}</p>
                                         </td>
 
                                         <td class="px-4 py-4">
-                                            <p class="font-semibold text-slate-900">
-                                                {{ fullName(sale.client) }}
-                                            </p>
+                                            <p class="font-semibold text-slate-900">{{ fullName(sale.client) }}</p>
                                             <p class="text-xs text-slate-500">
                                                 {{ sale.project?.project_name || "—" }}
                                                 /
@@ -561,27 +643,13 @@ onMounted(() => {
                             <table class="min-w-full divide-y divide-slate-200">
                                 <thead class="bg-slate-50">
                                     <tr>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">
-                                            Sale
-                                        </th>
-                                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase text-slate-500">
-                                            Rate
-                                        </th>
-                                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase text-slate-500">
-                                            Earned
-                                        </th>
-                                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase text-slate-500">
-                                            Paid
-                                        </th>
-                                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase text-slate-500">
-                                            Deleted
-                                        </th>
-                                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase text-slate-500">
-                                            Balance
-                                        </th>
-                                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase text-slate-500">
-                                            Status
-                                        </th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">Sale</th>
+                                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase text-slate-500">Rate</th>
+                                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase text-slate-500">Earned</th>
+                                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase text-slate-500">Paid</th>
+                                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase text-slate-500">Deleted</th>
+                                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase text-slate-500">Balance</th>
+                                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase text-slate-500">Status</th>
                                     </tr>
                                 </thead>
 
@@ -648,21 +716,11 @@ onMounted(() => {
                                 <table class="min-w-full divide-y divide-slate-200">
                                     <thead class="bg-slate-50">
                                         <tr>
-                                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">
-                                                Date
-                                            </th>
-                                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">
-                                                Sale
-                                            </th>
-                                            <th class="px-4 py-3 text-right text-xs font-semibold uppercase text-slate-500">
-                                                Amount
-                                            </th>
-                                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">
-                                                Method / Reference
-                                            </th>
-                                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">
-                                                Encoded By
-                                            </th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">Date</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">Sale</th>
+                                            <th class="px-4 py-3 text-right text-xs font-semibold uppercase text-slate-500">Amount</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">Method / Reference</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">Encoded By</th>
                                         </tr>
                                     </thead>
 
@@ -671,18 +729,11 @@ onMounted(() => {
                                             v-for="payment in payments"
                                             :key="payment.id"
                                         >
-                                            <td class="px-4 py-4">
-                                                {{ date(payment.payment_date) }}
-                                            </td>
-
-                                            <td class="px-4 py-4">
-                                                {{ payment.sale?.sale_no || "—" }}
-                                            </td>
-
+                                            <td class="px-4 py-4">{{ date(payment.payment_date) }}</td>
+                                            <td class="px-4 py-4">{{ payment.sale?.sale_no || "—" }}</td>
                                             <td class="px-4 py-4 text-right font-bold text-emerald-700">
                                                 {{ money(payment.amount) }}
                                             </td>
-
                                             <td class="px-4 py-4">
                                                 <p class="capitalize">
                                                     {{ payment.payment_method?.replace("_", " ") || "—" }}
@@ -691,7 +742,6 @@ onMounted(() => {
                                                     {{ payment.reference_no || "—" }}
                                                 </p>
                                             </td>
-
                                             <td class="px-4 py-4">
                                                 {{ payment.created_by?.name || payment.created_by?.email || "—" }}
                                             </td>
@@ -717,21 +767,11 @@ onMounted(() => {
                                 <table class="min-w-full divide-y divide-slate-200">
                                     <thead class="bg-slate-50">
                                         <tr>
-                                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">
-                                                Deleted At
-                                            </th>
-                                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">
-                                                Sale
-                                            </th>
-                                            <th class="px-4 py-3 text-right text-xs font-semibold uppercase text-slate-500">
-                                                Amount
-                                            </th>
-                                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">
-                                                Reason
-                                            </th>
-                                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">
-                                                Deleted By
-                                            </th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">Deleted At</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">Sale</th>
+                                            <th class="px-4 py-3 text-right text-xs font-semibold uppercase text-slate-500">Amount</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">Reason</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">Deleted By</th>
                                         </tr>
                                     </thead>
 
@@ -740,22 +780,14 @@ onMounted(() => {
                                             v-for="payment in deletedPayments"
                                             :key="payment.id"
                                         >
-                                            <td class="px-4 py-4">
-                                                {{ date(payment.deleted_at) }}
-                                            </td>
-
-                                            <td class="px-4 py-4">
-                                                {{ payment.sale?.sale_no || "—" }}
-                                            </td>
-
+                                            <td class="px-4 py-4">{{ date(payment.deleted_at) }}</td>
+                                            <td class="px-4 py-4">{{ payment.sale?.sale_no || "—" }}</td>
                                             <td class="px-4 py-4 text-right font-bold text-red-700">
                                                 {{ money(payment.amount) }}
                                             </td>
-
                                             <td class="px-4 py-4">
                                                 {{ payment.delete_reason || "—" }}
                                             </td>
-
                                             <td class="px-4 py-4">
                                                 {{ payment.deleted_by?.name || payment.deleted_by?.email || "—" }}
                                             </td>
@@ -776,67 +808,104 @@ onMounted(() => {
 
                         <div
                             v-else-if="activeTab === 'sub_agents'"
-                            class="overflow-x-auto"
+                            class="space-y-4"
                         >
-                            <table class="min-w-full divide-y divide-slate-200">
-                                <thead class="bg-slate-50">
-                                    <tr>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">
-                                            Sub-Agent
-                                        </th>
-                                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">
-                                            Contact
-                                        </th>
-                                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase text-slate-500">
-                                            Rate
-                                        </th>
-                                        <th class="px-4 py-3 text-center text-xs font-semibold uppercase text-slate-500">
-                                            Status
-                                        </th>
-                                    </tr>
-                                </thead>
+                            <div class="flex justify-between gap-3">
+                                <div>
+                                    <h3 class="font-semibold text-slate-900">
+                                        Sub-Agents
+                                    </h3>
 
-                                <tbody class="divide-y divide-slate-100">
-                                    <tr
-                                        v-for="subAgent in subAgents"
-                                        :key="subAgent.id"
-                                    >
-                                        <td class="px-4 py-4">
-                                            <p class="font-semibold">
-                                                {{ fullName(subAgent) }}
-                                            </p>
-                                            <p class="text-xs text-slate-500">
-                                                {{ subAgent.agent_code || "—" }}
-                                            </p>
-                                           
-                                        </td>
+                                    <p class="text-sm text-slate-500">
+                                        Sub-agents assigned under this main agent.
+                                    </p>
+                                </div>
 
-                                        <td class="px-4 py-4">
-                                            <p>{{ subAgent.contact_number || "—" }}</p>
-                                            <p class="text-xs text-slate-500">
-                                                {{ subAgent.email || "—" }}
-                                            </p>
-                                        </td>
+                                <button
+                                    v-if="!isSubAgent"
+                                    type="button"
+                                    @click="openAddSubAgentModal"
+                                    class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+                                >
+                                    Add Sub-Agent
+                                </button>
+                            </div>
 
-                                        <td class="px-4 py-4 text-center font-semibold text-emerald-700">
-                                            {{ subAgent.default_commission_rate || 0 }}%
-                                        </td>
+                            <div
+                                v-if="isSubAgent"
+                                class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800"
+                            >
+                                This agent is a sub-agent under
+                                <strong>{{ fullName(agent.main_agent) }}</strong>.
+                                Sub-agents cannot have their own sub-agents.
+                            </div>
 
-                                        <td class="px-4 py-4 text-center capitalize">
-                                            {{ subAgent.status || "—" }}
-                                        </td>
-                                    </tr>
+                            <div
+                                v-else
+                                class="overflow-x-auto"
+                            >
+                                <table class="min-w-full divide-y divide-slate-200">
+                                    <thead class="bg-slate-50">
+                                        <tr>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">Sub-Agent</th>
+                                            <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-slate-500">Contact</th>
+                                            <th class="px-4 py-3 text-center text-xs font-semibold uppercase text-slate-500">Rate</th>
+                                            <th class="px-4 py-3 text-center text-xs font-semibold uppercase text-slate-500">Status</th>
+                                            <th class="px-4 py-3 text-right text-xs font-semibold uppercase text-slate-500">Action</th>
+                                        </tr>
+                                    </thead>
 
-                                    <tr v-if="subAgents.length === 0">
-                                        <td
-                                            colspan="4"
-                                            class="px-4 py-8 text-center text-sm text-slate-500"
+                                    <tbody class="divide-y divide-slate-100">
+                                        <tr
+                                            v-for="subAgent in subAgents"
+                                            :key="subAgent.id"
                                         >
-                                            No sub-agents found.
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                                            <td class="px-4 py-4">
+                                                <p class="font-semibold">
+                                                    {{ fullName(subAgent) }}
+                                                </p>
+                                                <p class="text-xs text-slate-500">
+                                                    {{ subAgent.agent_code || "—" }}
+                                                </p>
+                                            </td>
+
+                                            <td class="px-4 py-4">
+                                                <p>{{ subAgent.contact_number || "—" }}</p>
+                                                <p class="text-xs text-slate-500">
+                                                    {{ subAgent.email || "—" }}
+                                                </p>
+                                            </td>
+
+                                            <td class="px-4 py-4 text-center font-semibold text-emerald-700">
+                                                {{ subAgent.default_commission_rate || 0 }}%
+                                            </td>
+
+                                            <td class="px-4 py-4 text-center capitalize">
+                                                {{ subAgent.status || "—" }}
+                                            </td>
+
+                                            <td class="px-4 py-4 text-right">
+                                                <button
+                                                    type="button"
+                                                    @click="router.push(`/agent-management/agents/${subAgent.id}`)"
+                                                    class="rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100"
+                                                >
+                                                    View
+                                                </button>
+                                            </td>
+                                        </tr>
+
+                                        <tr v-if="subAgents.length === 0">
+                                            <td
+                                                colspan="5"
+                                                class="px-4 py-8 text-center text-sm text-slate-500"
+                                            >
+                                                No sub-agents found.
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -849,5 +918,13 @@ onMounted(() => {
                 Agent not found.
             </div>
         </div>
+
+        <AddSubAgentModal
+            :show="showAddSubAgentModal"
+            :parent-agent="agent"
+            :saving="savingSubAgent"
+            @close="closeAddSubAgentModal"
+            @submit="saveSubAgent"
+        />
     </AppLayout>
 </template>
