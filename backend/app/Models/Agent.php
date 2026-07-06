@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\AgentCommissionPayment;
+use App\Models\AgentDocument;
+use App\Models\AgentActivity;
+use App\Models\Sale;
 
 class Agent extends Model
 {
@@ -43,8 +46,31 @@ class Agent extends Model
         return $this->hasMany(Reservation::class);
     }
 
-        public function commissionPayments(): HasMany
+    public function commissionPayments(): HasMany
     {
         return $this->hasMany(AgentCommissionPayment::class);
     }
+    public function documents()
+    {
+        return $this->hasMany(AgentDocument::class);
+    }
+
+    public function activities()
+    {
+        return $this->hasMany(AgentActivity::class)
+            ->latest();
+    }
+
+    public function sales(): HasMany
+{
+    return $this->hasMany(Sale::class, 'agent_id');
+}
+
+    public function payments(): HasMany
+{
+    return $this->commissionPayments();
+}
+
+
+
 }
