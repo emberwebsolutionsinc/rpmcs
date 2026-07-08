@@ -17,7 +17,8 @@ import AgentPaymentsTab from "@/components/agent-management/tabs/AgentPaymentsTa
 import AgentSubAgentsTab from "@/components/agent-management/tabs/AgentSubAgentsTab.vue";
 import AgentTimelineTab from "@/components/agent-management/tabs/AgentTimelineTab.vue";
 import AgentDocumentsTab from "@/components/agent-management/tabs/AgentDocumentsTab.vue";
-import AgentActivitiesTab from "@/components/agent-management/tabs/AgentActivitiesTab.vue";
+
+import AddSubAgentModal from "@/components/agent-management/AddSubAgentModal.vue";
 
 import agentService from "@/services/agentService";
 import toast from "@/utils/toast";
@@ -36,6 +37,9 @@ const subAgents = ref([]);
 const documents = ref([]);
 const activities = ref([]);
 
+const showAddSubAgentModal = ref(false);
+const savingSubAgent = ref(false);
+
 const activeTab = ref("overview");
 
 const tabs = [
@@ -45,8 +49,7 @@ const tabs = [
     { key: "payments", label: "Payments" },
     { key: "sub_agents", label: "Sub Agents" },
     { key: "documents", label: "Documents" },
-    { key: "activities", label: "Activities" },
-     { key: "timeline", label: "Timeline" },
+    { key: "timeline", label: "Timeline" },
 ];
 
 const agentId = computed(() => route.params.id);
@@ -65,7 +68,6 @@ const loadAgent = async () => {
         subAgents.value = response.data.sub_agents ?? [];
         documents.value = response.data.documents ?? [];
         activities.value = response.data.activities ?? [];
-
     } catch (error) {
         console.error(error);
         toast.error("Failed to load agent details.");
@@ -95,6 +97,38 @@ const goToMainAgent = () => {
 
 const goToSubAgent = (subAgent) => {
     router.push(`/agent-management/agents/${subAgent.id}`);
+};
+
+const openAddSubAgentModal = () => {
+    showAddSubAgentModal.value = true;
+};
+
+const closeAddSubAgentModal = () => {
+    showAddSubAgentModal.value = false;
+};
+
+const saveSubAgent = async (payload) => {
+    savingSubAgent.value = true;
+
+    try {
+        await agentService.createAgent(payload);
+
+        toast.success("Sub-agent added successfully.");
+
+        closeAddSubAgentModal();
+
+        await loadAgent();
+    } catch (error) {
+        console.error(error);
+
+        const message =
+            error?.response?.data?.message ||
+            "Failed to add sub-agent.";
+
+        toast.error(message);
+    } finally {
+        savingSubAgent.value = false;
+    }
 };
 
 onMounted(() => {
@@ -128,9 +162,7 @@ watch(
                     @view-main-agent="goToMainAgent"
                 />
 
-                <AgentSummaryCards
-                    :summary="summary"
-                />
+                <AgentSummaryCards :summary="summary" />
 
                 <AgentTabs
                     :tabs="tabs"
@@ -165,26 +197,20 @@ watch(
                         :agent="agent"
                         :sub-agents="subAgents"
                         @view-sub-agent="goToSubAgent"
+                        @add-sub-agent="openAddSubAgentModal"
                     />
 
-                   <AgentDocumentsTab
+                    <AgentDocumentsTab
                         v-else-if="activeTab === 'documents'"
                         :agent="agent"
                         :documents="documents"
                         @refresh="loadAgent"
                     />
 
-                    <AgentActivitiesTab
-                        v-else-if="activeTab === 'activities'"
-                        :agent="agent"
-                    />
-
                     <AgentTimelineTab
                         v-else-if="activeTab === 'timeline'"
                         :activities="activities"
                     />
-
-                   
                 </AgentTabs>
             </template>
 
@@ -195,5 +221,13 @@ watch(
                 Agent not found.
             </div>
         </div>
+
+        <AddSubAgentModal
+            :show="showAddSubAgentModal"
+            :parent-agent="agent"
+            :saving="savingSubAgent"
+            @close="closeAddSubAgentModal"
+            @submit="saveSubAgent"
+        />
     </AppLayout>
 </template>

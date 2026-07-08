@@ -1,5 +1,6 @@
 <script setup>
 import StatusBadge from "@/components/common/StatusBadge.vue";
+import TopDelinquentsTable from "@/components/overdue/TopDelinquentsTable.vue";
 
 import {
     AlertTriangle,
@@ -220,9 +221,7 @@ const formatDate = (date) => {
                 </tbody>
             </table>
 
-            <TopDelinquentsTable
-                :records="topDelinquents"
-            />
+           
         </div>
     </div>
 </template>

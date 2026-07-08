@@ -9,8 +9,8 @@ defineProps({
         default: 0,
     },
     icon: {
-        type: Object,
-        required: true,
+        type: [Object, Function],
+        default: null,
     },
     color: {
         type: String,

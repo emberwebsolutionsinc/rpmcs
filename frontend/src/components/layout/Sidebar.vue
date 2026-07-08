@@ -334,15 +334,7 @@ const linkClass = (path) => {
                         v-show="openMenus.commissions"
                         class="ml-4 space-y-1 sm:ml-6"
                     >
-                        <RouterLink
-                            @click="$emit('close')"
-                            to="/commission-management/commissions"
-                            class="flex items-center gap-3 rounded-lg px-4 py-2 transition"
-                            :class="linkClass('/commission-management/commissions')"
-                        >
-                            <BadgeDollarSign class="h-4 w-4" />
-                            Agent Commissions
-                        </RouterLink>
+
 
                         <RouterLink
                             @click="$emit('close')"

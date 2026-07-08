@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, reactive, ref } from "vue";
-
+import { useRoute } from "vue-router";
 import AppLayout from "@/layouts/AppLayout.vue";
 import PageHeader from "@/components/common/PageHeader.vue";
 
@@ -12,6 +12,7 @@ import agentService from "@/services/agentService";
 import reportService from "@/services/reportService";
 import toast from "@/utils/toast";
 
+const route = useRoute();
 const loading = ref(false);
 const agentsLoading = ref(false);
 
@@ -23,7 +24,7 @@ const payments = ref([]);
 const deletedPayments = ref([]);
 
 const filters = reactive({
-    agent_id: "",
+    agent_id: route.query.agent_id ? Number(route.query.agent_id) : "",
     from_date: "",
     to_date: "",
 });
@@ -162,7 +163,15 @@ const resetFilters = async () => {
     await fetchLedger();
 };
 
-onMounted(fetchAgents);
+onMounted(async () => {
+    await fetchAgents();
+
+    if (route.query.agent_id) {
+        filters.agent_id = String(route.query.agent_id);
+    }
+
+    await fetchLedger();
+});
 </script>
 
 <template>

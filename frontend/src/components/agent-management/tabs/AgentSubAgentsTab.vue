@@ -10,7 +10,10 @@ const props = defineProps({
     },
 });
 
-const emit = defineEmits(["view-sub-agent"]);
+const emit = defineEmits([
+    "view-sub-agent",
+    "add-sub-agent",
+]);
 
 const fullName = (person) => {
     if (!person) return "—";
@@ -28,18 +31,37 @@ const fullName = (person) => {
 const isSubAgent = () => {
     return props.agent?.agent_type === "sub_agent";
 };
+
+const viewSubAgent = (subAgent) => {
+    emit("view-sub-agent", subAgent);
+};
+
+const addSubAgent = () => {
+    emit("add-sub-agent", props.agent);
+};
 </script>
 
 <template>
     <div class="space-y-4">
-        <div>
-            <h3 class="font-semibold text-slate-900">
-                Sub-Agents
-            </h3>
+        <div class="flex items-start justify-between gap-3">
+            <div>
+                <h3 class="font-semibold text-slate-900">
+                    Sub-Agents
+                </h3>
 
-            <p class="text-sm text-slate-500">
-                Sub-agents assigned under this main agent.
-            </p>
+                <p class="text-sm text-slate-500">
+                    Sub-agents assigned under this main agent.
+                </p>
+            </div>
+
+            <button
+                v-if="!isSubAgent()"
+                type="button"
+                @click="addSubAgent"
+                class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+            >
+                Add Sub-Agent
+            </button>
         </div>
 
         <div
@@ -115,7 +137,7 @@ const isSubAgent = () => {
                         <td class="px-4 py-4 text-right">
                             <button
                                 type="button"
-                                @click="emit('view-sub-agent', subAgent)"
+                                @click="viewSubAgent(subAgent)"
                                 class="rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100"
                             >
                                 View

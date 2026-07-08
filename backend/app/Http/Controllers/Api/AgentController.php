@@ -66,124 +66,156 @@ class AgentController extends Controller
         ], 201);
     }
 
-    public function show(Agent $agent): JsonResponse
-    {
-        $agent->load([
-            'mainAgent',
-            'subAgents',
-            'documents.uploadedBy',
-            'commissionPayments',
-            'activities.user',
-        ]);
+public function show(Agent $agent): JsonResponse
+{
+    $agent->load([
+        'mainAgent',
+        'subAgents',
+        'documents.uploadedBy',
+        'commissionPayments',
+        'activities.user',
+    ]);
 
-        $sales = $agent->sales()
-            ->with([
-                'client',
-                'reservation',
-                'lot',
-                'lot.block',
-                'lot.block.phase',
-                'lot.block.phase.project',
-                'agentCommissionPayments',
-                'collections',
-            ])
+    $sales = $agent->sales()
+        ->with([
+            'client',
+            'reservation',
+            'lot.block.phase.project',
+            'agentCommissionPayments',
+            'collections',
+        ])
+        ->latest()
+        ->get()
+        ->map(function ($sale) {
+            $contractPrice = (float) ($sale->contract_price ?? 0);
+
+            $commissionPaid = (float) $sale->agentCommissionPayments->sum('amount');
+
+            $totalCollection = (float) $sale->collections->sum('amount');
+
+            $collectionBalance = max($contractPrice - $totalCollection, 0);
+
+            $collectionProgress = $contractPrice > 0
+                ? round(($totalCollection / $contractPrice) * 100, 2)
+                : 0;
+
+            $commissionRate = (float) ($sale->agent?->default_commission_rate ?? 0);
+
+            $commissionEarned = $commissionRate > 0
+                ? round($contractPrice * ($commissionRate / 100), 2)
+                : 0;
+
+            $commissionBalance = max($commissionEarned - $commissionPaid, 0);
+
+            return [
+                'id' => $sale->id,
+                'sale_id' => $sale->id,
+                'sale_no' => $sale->sale_no,
+                'reservation_id' => $sale->reservation_id,
+                'client_id' => $sale->client_id,
+                'lot_id' => $sale->lot_id,
+                'agent_id' => $sale->agent_id,
+
+                'contract_price' => $contractPrice,
+                'downpayment' => (float) ($sale->downpayment ?? 0),
+                'balance' => (float) ($sale->balance ?? $collectionBalance),
+
+                'total_collection' => $totalCollection,
+                'collection_balance' => $collectionBalance,
+                'collection_progress' => min($collectionProgress, 100),
+
+                'sale_date' => $sale->sale_date,
+                'status' => $sale->status,
+                'remarks' => $sale->remarks,
+
+                'client' => $sale->client,
+                'reservation' => $sale->reservation,
+                'lot' => $sale->lot,
+                'project' => $sale->lot?->block?->phase?->project,
+                'phase' => $sale->lot?->block?->phase,
+                'block' => $sale->lot?->block,
+
+                'commission_rate' => $commissionRate,
+                'commission_earned' => $commissionEarned,
+                'commission_paid' => $commissionPaid,
+                'commission_balance' => $commissionBalance,
+            ];
+        });
+
+    $payments = $agent->commissionPayments()
+        ->with(['sale', 'createdBy'])
+        ->latest()
+        ->get();
+
+    $deletedPayments = method_exists($agent, 'deletedCommissionPayments')
+        ? $agent->deletedCommissionPayments()
+            ->with(['sale', 'deletedBy'])
             ->latest()
             ->get()
-            ->map(function ($sale) {
-                $commissionPaid = $sale->agentCommissionPayments->sum('amount');
-                $totalCollection = $sale->collections->sum('amount');
-                $commissionEarned = 0;
+        : collect();
 
-                return [
-                    'id' => $sale->id,
-                    'sale_id' => $sale->id,
-                    'sale_no' => $sale->sale_no,
-                    'reservation_id' => $sale->reservation_id,
-                    'client_id' => $sale->client_id,
-                    'lot_id' => $sale->lot_id,
-                    'agent_id' => $sale->agent_id,
-                    'contract_price' => (float) $sale->contract_price,
-                    'downpayment' => (float) $sale->downpayment,
-                    'balance' => (float) $sale->balance,
-                    'sale_date' => $sale->sale_date,
-                    'status' => $sale->status,
-                    'remarks' => $sale->remarks,
+    $totalSales = $sales->count();
 
-                    'client' => $sale->client,
-                    'reservation' => $sale->reservation,
-                    'lot' => $sale->lot,
-                    'project' => $sale->lot?->block?->phase?->project,
-                    'phase' => $sale->lot?->block?->phase,
-                    'block' => $sale->lot?->block,
+    $totalContractPrice = $sales->sum('contract_price');
 
-                    'total_collection' => $totalCollection,
-                    'commission_rate' => (float) ($sale->agent?->default_commission_rate ?? 0),
-                    'commission_earned' => $commissionEarned,
-                    'commission_paid' => $commissionPaid,
-                    'commission_balance' => max($commissionEarned - $commissionPaid, 0),
-                ];
-            });
+    $totalCollection = $sales->sum('total_collection');
 
-        $payments = $agent->commissionPayments()
-            ->with(['sale', 'createdBy'])
-            ->latest()
-            ->get();
+    $totalCollectionBalance = $sales->sum('collection_balance');
 
-        $deletedPayments = method_exists($agent, 'deletedCommissionPayments')
-            ? $agent->deletedCommissionPayments()
-                ->with(['sale', 'deletedBy'])
-                ->latest()
-                ->get()
-            : collect();
+    $overallCollectionProgress = $totalContractPrice > 0
+        ? round(($totalCollection / $totalContractPrice) * 100, 2)
+        : 0;
 
-        $totalSales = $sales->count();
+    $totalCommissionEarned = $sales->sum('commission_earned');
 
-        $totalContractPrice = $sales->sum('contract_price');
+    $totalCommissionPaid = $sales->sum('commission_paid');
 
-        $totalCommissionEarned = $sales->sum('commission_earned');
+    $totalCommissionBalance = max(
+        $totalCommissionEarned - $totalCommissionPaid,
+        0
+    );
 
-        $totalCommissionPaid = $payments->sum('amount');
+    $totalClients = $sales
+        ->pluck('client_id')
+        ->filter()
+        ->unique()
+        ->count();
 
-        $totalCommissionBalance = max(
-            $totalCommissionEarned - $totalCommissionPaid,
-            0
-        );
+    $totalProjects = $sales
+        ->pluck('project.id')
+        ->filter()
+        ->unique()
+        ->count();
 
-        $totalClients = $sales
-            ->pluck('client_id')
-            ->filter()
-            ->unique()
-            ->count();
+    $summary = [
+        'total_sales' => $totalSales,
+        'total_contract_price' => $totalContractPrice,
 
-        $totalProjects = $sales
-            ->pluck('project.id')
-            ->filter()
-            ->unique()
-            ->count();
+        'total_collection' => $totalCollection,
+        'total_collection_balance' => $totalCollectionBalance,
+        'collection_progress' => min($overallCollectionProgress, 100),
 
-        $summary = [
-            'total_sales' => $totalSales,
-            'total_contract_price' => $totalContractPrice,
-            'total_commission_earned' => $totalCommissionEarned,
-            'total_commission_paid' => $totalCommissionPaid,
-            'total_commission_balance' => $totalCommissionBalance,
-            'total_clients' => $totalClients,
-            'total_projects' => $totalProjects,
-            'sub_agents_count' => $agent->subAgents->count(),
-            'documents_count' => $agent->documents->count(),
-        ];
+        'total_commission_earned' => $totalCommissionEarned,
+        'total_commission_paid' => $totalCommissionPaid,
+        'total_commission_balance' => $totalCommissionBalance,
 
-        return response()->json([
-            'data' => $agent,
-            'summary' => $summary,
-            'sales' => $sales,
-            'payments' => $payments,
-            'deleted_payments' => $deletedPayments,
-            'sub_agents' => $agent->subAgents,
-            'documents' => $agent->documents,
-            'activities' => $agent->activities,
-        ]);
-    }
+        'total_clients' => $totalClients,
+        'total_projects' => $totalProjects,
+        'sub_agents_count' => $agent->subAgents->count(),
+        'documents_count' => $agent->documents->count(),
+    ];
+
+    return response()->json([
+        'data' => $agent,
+        'summary' => $summary,
+        'sales' => $sales,
+        'payments' => $payments,
+        'deleted_payments' => $deletedPayments,
+        'sub_agents' => $agent->subAgents,
+        'documents' => $agent->documents,
+        'activities' => $agent->activities,
+    ]);
+}
 
     public function update(UpdateAgentRequest $request, Agent $agent): JsonResponse
     {
