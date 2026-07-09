@@ -36,7 +36,7 @@ class Sale extends Model
 
     public function client()
     {
-        return $this->belongsTo(Client::class);
+        return $this->belongsTo(Client::class, 'client_id');
     }
 
     public function lot()
@@ -51,15 +51,15 @@ class Sale extends Model
 
     public function paymentSchedules(): HasMany
     {
-        return $this->hasMany(PaymentSchedule::class);
+        return $this->hasMany(PaymentSchedule::class,'sale_id');
     }
 
         public function collections()
     {
-        return $this->hasMany(Collection::class);
+        return $this->hasMany(Collection::class,'sale_id');
     }
     public function agentCommissionPayments(): HasMany
     {
-        return $this->hasMany(AgentCommissionPayment::class);
+        return $this->hasMany(AgentCommissionPayment::class,'sale_id');
     }
 }

@@ -109,10 +109,8 @@ class SaleController extends Controller
         ], 201);
     }
 
-    public function show(
-        Sale $sale
-    ): JsonResponse {
-
+    public function show(Sale $sale): JsonResponse
+    {
         $sale->load([
             'reservation',
             'client',
@@ -120,10 +118,64 @@ class SaleController extends Controller
             'lot.phase',
             'lot.block',
             'agent',
+            'collections',
+            'agentCommissionPayments',
         ]);
 
+        $getCollectionAmount = function ($collection) {
+            return (float) (
+                $collection->amount_received
+                ?? $collection->amount_paid
+                ?? $collection->payment_amount
+                ?? $collection->collection_amount
+                ?? $collection->paid_amount
+                ?? $collection->amount
+                ?? 0
+            );
+        };
+
+        $contractPrice = (float) ($sale->contract_price ?? 0);
+        $downpayment = (float) ($sale->downpayment ?? 0);
+
+        $collectionsTotal = (float) $sale->collections->sum(function ($collection) use ($getCollectionAmount) {
+            return $getCollectionAmount($collection);
+        });
+
+        $totalCollected = $downpayment + $collectionsTotal;
+        $balance = max($contractPrice - $totalCollected, 0);
+
+        $commissionPaid = (float) $sale->agentCommissionPayments->sum('amount');
+
         return response()->json([
-            'data' => $sale,
+            'data' => [
+                ...$sale->toArray(),
+
+                'contract_price' => $contractPrice,
+                'downpayment' => $downpayment,
+                'collections_total' => $collectionsTotal,
+                'total_collection' => $totalCollected,
+                'total_collected' => $totalCollected,
+                'balance' => $balance,
+
+                'commission_paid' => $commissionPaid,
+
+                'client' => $sale->client,
+                'agent' => $sale->agent,
+                'reservation' => $sale->reservation,
+                'lot' => $sale->lot,
+                'project' => $sale->lot?->project,
+                'phase' => $sale->lot?->phase,
+                'block' => $sale->lot?->block,
+                'collections' => $sale->collections->map(function ($collection) use ($getCollectionAmount) {
+                    $amountReceived = $getCollectionAmount($collection);
+
+                    return [
+                        ...$collection->toArray(),
+                        'amount' => $amountReceived,
+                        'amount_received' => $amountReceived,
+                    ];
+                }),
+            ],
         ]);
     }
 

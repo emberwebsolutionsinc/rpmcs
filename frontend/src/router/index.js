@@ -7,9 +7,6 @@ import DashboardView from "@/views/dashboard/DashboardView.vue";
 import PropertyProjectsView from "@/views/property-management/PropertyProjectsView.vue";
 import ProjectDetailsView from "@/views/property-management/ProjectDetailsView.vue";
 
-import ClientsView from "@/views/client-management/ClientsView.vue";
-
-
 import ReservationsView from "@/views/sales-management/ReservationsView.vue";
 import SalesView from "@/views/sales-management/SalesView.vue";
 import CollectionsView from "@/views/sales-management/CollectionsView.vue";
@@ -32,7 +29,8 @@ import AgentCommissionLedgerView from "@/views/reports/AgentCommissionLedgerView
 import AgentsView from "@/views/agent-management/AgentsView.vue";
 import AgentDetailsView from "@/views/agent-management/AgentDetailsView.vue";
 
-
+import ClientsView from "@/views/client-management/ClientsView.vue";
+import ClientDetailsView from "@/views/client-management/ClientDetailsView.vue";
 
 import UsersView from "@/views/administration/UsersView.vue";
 import RolesView from "@/views/administration/RolesView.vue";
@@ -101,14 +99,24 @@ const router = createRouter({
                 title: "Project Details",
             },
         },
-
+        //client management
         {
             path: "/client-management/clients",
             name: "clients",
             component: ClientsView,
             meta: {
                 requiresAuth: true,
-                title: "Clients",
+                title: "Client Management",
+            },
+        },
+        
+        {
+            path: "/client-management/clients/:id",
+            name: "client-details",
+            component: ClientDetailsView,
+            meta: {
+                requiresAuth: true,
+                title: "Client Details",
             },
         },
 

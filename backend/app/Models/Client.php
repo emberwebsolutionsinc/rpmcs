@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\Sale;
 
 class Client extends Model
 {
@@ -28,9 +29,14 @@ class Client extends Model
     ];
 
     public function reservations(): HasMany
-{
-    return $this->hasMany(Reservation::class);
-}
+    {
+        return $this->hasMany(Reservation::class);
+    }
+
+    public function sales()
+    {
+        return $this->hasMany(Sale::class, 'client_id');
+    }
 
 }
 
