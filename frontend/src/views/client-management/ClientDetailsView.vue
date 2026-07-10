@@ -6,6 +6,9 @@ import AppLayout from "@/layouts/AppLayout.vue";
 import PageHeader from "@/components/common/PageHeader.vue";
 import TableSkeleton from "@/components/common/TableSkeleton.vue";
 
+import ClientDocumentsTab from "@/views/client-management/ClientDocumentsTab.vue";
+import UploadClientDocumentModal from "@/views/client-management/UploadClientDocumentModal.vue";
+
 import clientService from "@/services/clientService";
 import toast from "@/utils/toast";
 
@@ -19,6 +22,9 @@ const sales = ref([]);
 const collections = ref([]);
 const documents = ref([]);
 const activities = ref([]);
+
+const showUploadDocumentModal = ref(false);
+const uploadingDocument = ref(false);
 
 const activeTab = ref("overview");
 
@@ -132,6 +138,64 @@ const loadClient = async () => {
         toast.error("Failed to load client details.");
     } finally {
         loading.value = false;
+    }
+};
+
+const openUploadDocumentModal = () => {
+    showUploadDocumentModal.value = true;
+};
+
+const closeUploadDocumentModal = () => {
+    showUploadDocumentModal.value = false;
+};
+
+const uploadClientDocument = async (payload) => {
+    uploadingDocument.value = true;
+
+    try {
+        const formData = new FormData();
+
+        formData.append(
+            "document_type",
+            payload.document_type || ""
+        );
+
+        formData.append(
+            "document_name",
+            payload.document_name
+        );
+
+        formData.append(
+            "remarks",
+            payload.remarks || ""
+        );
+
+        formData.append(
+            "file",
+            payload.file
+        );
+
+        await clientService.uploadClientDocument(
+            clientId.value,
+            formData
+        );
+
+        toast.success(
+            "Client document uploaded successfully."
+        );
+
+        closeUploadDocumentModal();
+
+        await loadClient();
+    } catch (error) {
+        console.error(error);
+
+        toast.error(
+            error?.response?.data?.message ||
+                "Failed to upload client document."
+        );
+    } finally {
+        uploadingDocument.value = false;
     }
 };
 
@@ -559,37 +623,13 @@ onMounted(loadClient);
                             </div>
                         </div>
 
-                        <div v-else-if="activeTab === 'documents'">
-                            <div
-                                v-if="documents.length === 0"
-                                class="rounded-xl border border-dashed border-slate-300 p-10 text-center text-slate-500"
-                            >
-                                No documents uploaded for this client.
-                            </div>
-
-                            <div
-                                v-else
-                                class="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
-                            >
-                                <div
-                                    v-for="document in documents"
-                                    :key="document.id"
-                                    class="rounded-xl border border-slate-200 p-4"
-                                >
-                                    <p class="font-semibold text-slate-900">
-                                        {{
-                                            document.document_name ||
-                                            document.name ||
-                                            "Document"
-                                        }}
-                                    </p>
-
-                                    <p class="mt-1 text-xs text-slate-500">
-                                        {{ document.document_type || "—" }}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
+                        <ClientDocumentsTab
+                            v-else-if="activeTab === 'documents'"
+                            :client="client"
+                            :documents="documents"
+                            @upload="openUploadDocumentModal"
+                            @refresh="loadClient"
+                        />
 
                         <div v-else-if="activeTab === 'timeline'">
                             <div
@@ -630,5 +670,13 @@ onMounted(loadClient);
                 Client not found.
             </div>
         </div>
+
+        <UploadClientDocumentModal
+            :show="showUploadDocumentModal"
+            :client="client"
+            :saving="uploadingDocument"
+            @close="closeUploadDocumentModal"
+            @submit="uploadClientDocument"
+        />
     </AppLayout>
 </template>

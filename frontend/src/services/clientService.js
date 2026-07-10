@@ -22,4 +22,51 @@ export default {
     deleteClient(id) {
         return api.delete(`/client-management/clients/${id}`);
     },
+
+    getClientDocuments(clientId) {
+    return api.get(
+        `/client-management/clients/${clientId}/documents`
+    );
+    },
+
+    uploadClientDocument(
+        clientId,
+        formData,
+        onUploadProgress = null
+    ) {
+        return api.post(
+            `/client-management/clients/${clientId}/documents`,
+            formData,
+            {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                },
+                onUploadProgress,
+            }
+        );
+    },
+
+    previewClientDocument(clientId, documentId) {
+        return api.get(
+            `/client-management/clients/${clientId}/documents/${documentId}/preview`,
+            {
+                responseType: "blob",
+            }
+        );
+    },
+
+    downloadClientDocument(clientId, documentId) {
+        return api.get(
+            `/client-management/clients/${clientId}/documents/${documentId}/download`,
+            {
+                responseType: "blob",
+            }
+        );
+    },
+
+    deleteClientDocument(clientId, documentId) {
+        return api.delete(
+            `/client-management/clients/${clientId}/documents/${documentId}`
+        );
+    },
 };

@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\ProjectBlockController;
 use App\Http\Controllers\Api\LotController;
 
 use App\Http\Controllers\Api\ClientController;
+use App\Http\Controllers\Api\ClientManagement\ClientDocumentController;
 use App\Http\Controllers\Api\AgentController;
 use App\Http\Controllers\Api\AgentDocumentController;
 
@@ -157,9 +158,34 @@ Route::prefix('v1')->group(function () {
         */
 
         Route::prefix('client-management')->group(function () {
+        Route::apiResource('clients', ClientController::class);
 
-            Route::apiResource('clients', ClientController::class);
-        });
+        Route::get(
+            'clients/{client}/documents',
+            [ClientDocumentController::class, 'index']
+        );
+
+        Route::post(
+            'clients/{client}/documents',
+            [ClientDocumentController::class, 'store']
+        );
+
+        Route::get(
+            'clients/{client}/documents/{document}/preview',
+            [ClientDocumentController::class, 'preview']
+        );
+
+        Route::get(
+            'clients/{client}/documents/{document}/download',
+            [ClientDocumentController::class, 'download']
+        );
+
+        Route::delete(
+            'clients/{client}/documents/{document}',
+            [ClientDocumentController::class, 'destroy']
+        );
+    });
+
 
         /*
         |--------------------------------------------------------------------------

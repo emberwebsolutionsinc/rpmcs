@@ -81,6 +81,7 @@ class ClientController extends Controller
             'sales.lot.block.phase.project',
             'sales.collections',
             'sales.agentCommissionPayments',
+            'documents.uploadedBy',
         ]);
 
         $getCollectionAmount = function ($collection) {
@@ -187,7 +188,7 @@ class ClientController extends Controller
             'summary' => $summary,
             'sales' => $sales,
             'collections' => $collections,
-            'documents' => [],
+            'documents' => $client->documents,
             'activities' => [],
         ]);
     }
