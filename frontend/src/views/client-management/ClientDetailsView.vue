@@ -8,6 +8,8 @@ import TableSkeleton from "@/components/common/TableSkeleton.vue";
 
 import ClientDocumentsTab from "@/views/client-management/ClientDocumentsTab.vue";
 import UploadClientDocumentModal from "@/views/client-management/UploadClientDocumentModal.vue";
+import ClientTimelineTab from "@/views/client-management/ClientTimelineTab.vue";
+
 
 import clientService from "@/services/clientService";
 import toast from "@/utils/toast";
@@ -132,7 +134,7 @@ const loadClient = async () => {
         sales.value = response.data.sales ?? [];
         collections.value = response.data.collections ?? [];
         documents.value = response.data.documents ?? [];
-        activities.value = response.data.activities ?? [];
+        activities.value = response.data.timeline ?? response.data.activities ??[];
     } catch (error) {
         console.error(error);
         toast.error("Failed to load client details.");
@@ -631,34 +633,10 @@ onMounted(loadClient);
                             @refresh="loadClient"
                         />
 
-                        <div v-else-if="activeTab === 'timeline'">
-                            <div
-                                v-if="activities.length === 0"
-                                class="rounded-xl border border-dashed border-slate-300 p-10 text-center text-slate-500"
-                            >
-                                No timeline activities found.
-                            </div>
-
-                            <div v-else class="space-y-4">
-                                <div
-                                    v-for="activity in activities"
-                                    :key="activity.id"
-                                    class="rounded-xl border border-slate-200 p-4"
-                                >
-                                    <p class="font-semibold text-slate-900">
-                                        {{
-                                            activity.description ||
-                                            activity.event ||
-                                            "Activity"
-                                        }}
-                                    </p>
-
-                                    <p class="mt-1 text-xs text-slate-500">
-                                        {{ date(activity.created_at) }}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
+                        <ClientTimelineTab
+                            v-else-if="activeTab === 'timeline'"
+                            :activities="activities"
+                        />
                     </div>
                 </div>
             </template>

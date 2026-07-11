@@ -84,7 +84,17 @@ class ClientController extends Controller
             'documents.uploadedBy',
         ]);
 
-        $getCollectionAmount = function ($collection) {
+        /*
+        |--------------------------------------------------------------------------
+        | Reusable Collection Amount Resolver
+        |--------------------------------------------------------------------------
+        |
+        | This supports the possible amount column names currently used in RPMCS.
+        | The first non-null value will be used.
+        |
+        */
+
+        $getCollectionAmount = function ($collection): float {
             return (float) (
                 $collection->amount_received
                 ?? $collection->amount_paid
@@ -96,92 +106,509 @@ class ClientController extends Controller
             );
         };
 
-        $sales = $client->sales->map(function ($sale) use ($getCollectionAmount) {
-            $contractPrice = (float) ($sale->contract_price ?? 0);
+        /*
+        |--------------------------------------------------------------------------
+        | Sales Data
+        |--------------------------------------------------------------------------
+        */
 
-            $downpayment = (float) ($sale->downpayment ?? 0);
+        $sales = $client->sales->map(
+            function ($sale) use ($getCollectionAmount) {
+                $contractPrice = (float) (
+                    $sale->contract_price ?? 0
+                );
 
-            $collectionsTotal = (float) $sale->collections->sum(function ($collection) use ($getCollectionAmount) {
-                return $getCollectionAmount($collection);
-            });
+                $downpayment = (float) (
+                    $sale->downpayment ?? 0
+                );
 
-            $totalCollected = $downpayment + $collectionsTotal;
+                $collectionsTotal = (float) $sale
+                    ->collections
+                    ->sum(
+                        function ($collection) use ($getCollectionAmount) {
+                            return $getCollectionAmount($collection);
+                        }
+                    );
 
-            $balance = max($contractPrice - $totalCollected, 0);
+                $totalCollected =
+                    $downpayment + $collectionsTotal;
 
-            $commissionPaid = (float) $sale->agentCommissionPayments->sum('amount');
+                $balance = max(
+                    $contractPrice - $totalCollected,
+                    0
+                );
 
-            return [
-                'id' => $sale->id,
-                'sale_id' => $sale->id,
-                'sale_no' => $sale->sale_no,
-                'sale_date' => $sale->sale_date,
-                'status' => $sale->status,
+                $commissionPaid = (float) $sale
+                    ->agentCommissionPayments
+                    ->sum('amount');
 
-                'client_id' => $sale->client_id,
-                'agent_id' => $sale->agent_id,
-                'lot_id' => $sale->lot_id,
+                return [
+                    'id' => $sale->id,
+                    'sale_id' => $sale->id,
+                    'sale_no' => $sale->sale_no,
+                    'sale_date' => $sale->sale_date,
+                    'status' => $sale->status,
 
-                'contract_price' => $contractPrice,
-                'downpayment' => $downpayment,
+                    'client_id' => $sale->client_id,
+                    'agent_id' => $sale->agent_id,
+                    'lot_id' => $sale->lot_id,
 
-                'collections_total' => $collectionsTotal,
-                'total_collection' => $totalCollected,
-                'balance' => $balance,
+                    'contract_price' => $contractPrice,
+                    'downpayment' => $downpayment,
+                    'collections_total' => $collectionsTotal,
+                    'total_collection' => $totalCollected,
+                    'total_collected' => $totalCollected,
+                    'balance' => $balance,
 
-                'commission_paid' => $commissionPaid,
+                    'commission_paid' => $commissionPaid,
 
-                'client' => $sale->client,
-                'agent' => $sale->agent,
-                'lot' => $sale->lot,
-                'project' => $sale->lot?->block?->phase?->project,
-                'phase' => $sale->lot?->block?->phase,
-                'block' => $sale->lot?->block,
-            ];
-        });
+                    'client' => $sale->client,
+                    'agent' => $sale->agent,
+                    'lot' => $sale->lot,
+
+                    'project' =>
+                        $sale->lot?->block?->phase?->project,
+
+                    'phase' =>
+                        $sale->lot?->block?->phase,
+
+                    'block' =>
+                        $sale->lot?->block,
+                ];
+            }
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Collection Records
+        |--------------------------------------------------------------------------
+        */
 
         $collections = $client->sales
-            ->flatMap(function ($sale) use ($getCollectionAmount) {
-                return $sale->collections->map(function ($collection) use ($sale, $getCollectionAmount) {
-                    $amountReceived = $getCollectionAmount($collection);
+            ->flatMap(
+                function ($sale) use ($getCollectionAmount) {
+                    return $sale->collections->map(
+                        function ($collection) use (
+                            $sale,
+                            $getCollectionAmount
+                        ) {
+                            $amountReceived =
+                                $getCollectionAmount($collection);
 
-                    return [
-                        'id' => $collection->id,
-                        'sale_id' => $sale->id,
-                        'sale_no' => $sale->sale_no,
+                            return [
+                                'id' => $collection->id,
+                                'sale_id' => $sale->id,
+                                'sale_no' => $sale->sale_no,
 
-                        'amount' => $amountReceived,
-                        'amount_received' => $amountReceived,
+                                'amount' => $amountReceived,
+                                'amount_received' => $amountReceived,
 
-                        'reference_no' => $collection->reference_no ?? null,
-                        'or_no' => $collection->or_no ?? null,
-                        'payment_date' => $collection->payment_date ?? null,
-                        'collection_date' => $collection->collection_date ?? null,
-                        'created_at' => $collection->created_at,
-                        'remarks' => $collection->remarks ?? null,
+                                'reference_no' =>
+                                    $collection->reference_no
+                                    ?? null,
 
-                        'sale' => [
-                            'id' => $sale->id,
-                            'sale_no' => $sale->sale_no,
-                        ],
-                    ];
-                });
-            })
-            ->sortByDesc(function ($collection) {
-                return $collection['payment_date']
-                    ?? $collection['collection_date']
-                    ?? $collection['created_at'];
-            })
+                                'or_no' =>
+                                    $collection->or_no
+                                    ?? null,
+
+                                'payment_date' =>
+                                    $collection->payment_date
+                                    ?? null,
+
+                                'collection_date' =>
+                                    $collection->collection_date
+                                    ?? null,
+
+                                'created_at' =>
+                                    $collection->created_at,
+
+                                'remarks' =>
+                                    $collection->remarks
+                                    ?? null,
+
+                                'sale' => [
+                                    'id' => $sale->id,
+                                    'sale_no' => $sale->sale_no,
+                                ],
+                            ];
+                        }
+                    );
+                }
+            )
+            ->sortByDesc(
+                function ($collection) {
+                    return $collection['payment_date']
+                        ?? $collection['collection_date']
+                        ?? $collection['created_at'];
+                }
+            )
             ->values();
 
+        /*
+        |--------------------------------------------------------------------------
+        | Summary
+        |--------------------------------------------------------------------------
+        */
+
         $summary = [
-            'total_sales' => $sales->count(),
-            'total_contract_price' => $sales->sum('contract_price'),
-            'total_downpayment' => $sales->sum('downpayment'),
-            'total_collections' => $sales->sum('collections_total'),
-            'total_collected' => $sales->sum('total_collection'),
-            'total_balance' => $sales->sum('balance'),
+            'total_sales' =>
+                $sales->count(),
+
+            'total_contract_price' =>
+                $sales->sum('contract_price'),
+
+            'total_downpayment' =>
+                $sales->sum('downpayment'),
+
+            'total_collections' =>
+                $sales->sum('collections_total'),
+
+            'total_collected' =>
+                $sales->sum('total_collection'),
+
+            'total_balance' =>
+                $sales->sum('balance'),
+
+            'documents_count' =>
+                $client->documents->count(),
         ];
+
+        /*
+        |--------------------------------------------------------------------------
+        | Dynamic Timeline
+        |--------------------------------------------------------------------------
+        */
+
+        $timeline = collect();
+
+        /*
+        * Client created event
+        */
+        if ($client->created_at) {
+            $timeline->push([
+                'id' =>
+                    'client-created-' . $client->id,
+
+                'type' =>
+                    'client_created',
+
+                'title' =>
+                    'Client profile created',
+
+                'description' =>
+                    'The client profile was created in the system.',
+
+                'date' =>
+                    $client->created_at,
+
+                'created_at' =>
+                    $client->created_at,
+
+                'icon' =>
+                    'user-plus',
+
+                'color' =>
+                    'blue',
+
+                'amount' =>
+                    null,
+
+                'metadata' => [
+                    'client_id' => $client->id,
+                ],
+            ]);
+        }
+
+        /*
+        * Client updated event
+        */
+        if (
+            $client->updated_at
+            && $client->created_at
+            && !$client->updated_at->equalTo(
+                $client->created_at
+            )
+        ) {
+            $timeline->push([
+                'id' =>
+                    'client-updated-' . $client->id,
+
+                'type' =>
+                    'client_updated',
+
+                'title' =>
+                    'Client profile updated',
+
+                'description' =>
+                    'The client profile information was updated.',
+
+                'date' =>
+                    $client->updated_at,
+
+                'created_at' =>
+                    $client->updated_at,
+
+                'icon' =>
+                    'user-cog',
+
+                'color' =>
+                    'slate',
+
+                'amount' =>
+                    null,
+
+                'metadata' => [
+                    'client_id' => $client->id,
+                ],
+            ]);
+        }
+
+        /*
+        * Sale, downpayment, and collection events
+        */
+        foreach ($client->sales as $sale) {
+            $projectName =
+                $sale->lot?->block?->phase?->project?->project_name
+                ?? 'Unknown Project';
+
+            $phaseName =
+                $sale->lot?->block?->phase?->phase_name
+                ?? '—';
+
+            $blockNumber =
+                $sale->lot?->block?->block_no
+                ?? '—';
+
+            $lotNumber =
+                $sale->lot?->lot_no
+                ?? '—';
+
+            /*
+            * Sale created
+            */
+            $timeline->push([
+                'id' =>
+                    'sale-created-' . $sale->id,
+
+                'type' =>
+                    'sale_created',
+
+                'title' =>
+                    'Sale created',
+
+                'description' =>
+                    "Sale {$sale->sale_no} was created for "
+                    . "{$projectName}, Phase {$phaseName}, "
+                    . "Block {$blockNumber}, Lot {$lotNumber}.",
+
+                'date' =>
+                    $sale->sale_date
+                    ?? $sale->created_at,
+
+                'created_at' =>
+                    $sale->created_at,
+
+                'icon' =>
+                    'house',
+
+                'color' =>
+                    'emerald',
+
+                'amount' =>
+                    (float) ($sale->contract_price ?? 0),
+
+                'metadata' => [
+                    'sale_id' => $sale->id,
+                    'sale_no' => $sale->sale_no,
+                    'project_name' => $projectName,
+                    'phase_name' => $phaseName,
+                    'block_no' => $blockNumber,
+                    'lot_no' => $lotNumber,
+                ],
+            ]);
+
+            /*
+            * Downpayment recorded
+            */
+            if ((float) ($sale->downpayment ?? 0) > 0) {
+                $timeline->push([
+                    'id' =>
+                        'downpayment-' . $sale->id,
+
+                    'type' =>
+                        'downpayment_received',
+
+                    'title' =>
+                        'Downpayment recorded',
+
+                    'description' =>
+                        "A downpayment was recorded for sale {$sale->sale_no}.",
+
+                    'date' =>
+                        $sale->sale_date
+                        ?? $sale->created_at,
+
+                    'created_at' =>
+                        $sale->created_at,
+
+                    'icon' =>
+                        'banknote',
+
+                    'color' =>
+                        'purple',
+
+                    'amount' =>
+                        (float) $sale->downpayment,
+
+                    'metadata' => [
+                        'sale_id' => $sale->id,
+                        'sale_no' => $sale->sale_no,
+                    ],
+                ]);
+            }
+
+            /*
+            * Monthly collection records
+            */
+            foreach ($sale->collections as $collection) {
+                $amountReceived =
+                    $getCollectionAmount($collection);
+
+                $paymentDate =
+                    $collection->payment_date
+                    ?? $collection->collection_date
+                    ?? $collection->created_at;
+
+                $reference =
+                    $collection->reference_no
+                    ?? $collection->or_no
+                    ?? null;
+
+                $description =
+                    "A monthly installment was received for sale "
+                    . "{$sale->sale_no}.";
+
+                if ($reference) {
+                    $description .=
+                        " Reference: {$reference}.";
+                }
+
+                $timeline->push([
+                    'id' =>
+                        'collection-' . $collection->id,
+
+                    'type' =>
+                        'payment_received',
+
+                    'title' =>
+                        'Monthly installment received',
+
+                    'description' =>
+                        $description,
+
+                    'date' =>
+                        $paymentDate,
+
+                    'created_at' =>
+                        $collection->created_at,
+
+                    'icon' =>
+                        'receipt-text',
+
+                    'color' =>
+                        'green',
+
+                    'amount' =>
+                        $amountReceived,
+
+                    'metadata' => [
+                        'collection_id' => $collection->id,
+                        'sale_id' => $sale->id,
+                        'sale_no' => $sale->sale_no,
+                        'reference_no' => $reference,
+                    ],
+                ]);
+            }
+        }
+
+        /*
+        * Document upload events
+        */
+        foreach ($client->documents as $document) {
+            $uploaderName = null;
+
+            if ($document->uploadedBy) {
+                $uploaderName =
+                    $document->uploadedBy->name
+                    ?? trim(
+                        ($document->uploadedBy->first_name ?? '')
+                        . ' '
+                        . ($document->uploadedBy->last_name ?? '')
+                    );
+            }
+
+            if (!$uploaderName) {
+                $uploaderName = 'System';
+            }
+
+            $timeline->push([
+                'id' =>
+                    'document-uploaded-' . $document->id,
+
+                'type' =>
+                    'document_uploaded',
+
+                'title' =>
+                    'Document uploaded',
+
+                'description' =>
+                    "{$document->document_name} was uploaded by "
+                    . "{$uploaderName}.",
+
+                'date' =>
+                    $document->created_at,
+
+                'created_at' =>
+                    $document->created_at,
+
+                'icon' =>
+                    'file-up',
+
+                'color' =>
+                    'amber',
+
+                'amount' =>
+                    null,
+
+                'metadata' => [
+                    'document_id' =>
+                        $document->id,
+
+                    'document_name' =>
+                        $document->document_name,
+
+                    'document_type' =>
+                        $document->document_type,
+
+                    'file_name' =>
+                        $document->file_name,
+
+                    'uploaded_by' =>
+                        $uploaderName,
+                ],
+            ]);
+        }
+
+        /*
+        * Sort newest activity first
+        */
+        $timeline = $timeline
+            ->sortByDesc(
+                function ($event) {
+                    return $event['date'];
+                }
+            )
+            ->values();
 
         return response()->json([
             'data' => $client,
@@ -189,7 +616,12 @@ class ClientController extends Controller
             'sales' => $sales,
             'collections' => $collections,
             'documents' => $client->documents,
-            'activities' => [],
+
+            /*
+            * Return both keys for compatibility.
+            */
+            'activities' => $timeline,
+            'timeline' => $timeline,
         ]);
     }
 
