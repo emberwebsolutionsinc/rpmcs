@@ -25,6 +25,20 @@ const collections = ref([]);
 const documents = ref([]);
 const activities = ref([]);
 
+const editClient = () => {
+    if (!clientId.value) {
+        toast.error("Client ID is missing.");
+        return;
+    }
+
+    router.push({
+        name: "client-edit",
+        params: {
+            id: clientId.value,
+        },
+    });
+};
+
 const showUploadDocumentModal = ref(false);
 const uploadingDocument = ref(false);
 
@@ -228,13 +242,30 @@ onMounted(loadClient);
                     description="View client profile, sales, collections, documents, and timeline."
                 />
 
-                <button
-                    type="button"
-                    @click="goBack"
-                    class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                    Back
-                </button>
+                <div class="flex items-start justify-between gap-3">
+                <PageHeader
+                    title="Client Details"
+                    description="View client profile, sales, collections, documents, and timeline."
+                />
+
+                <div class="flex flex-wrap justify-end gap-2">
+                    <button
+                        type="button"
+                        @click="editClient"
+                        class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+                    >
+                        Edit Client
+                    </button>
+
+                    <button
+                        type="button"
+                        @click="goBack"
+                        class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                        Back
+                    </button>
+                </div>
+            </div>
             </div>
 
             <TableSkeleton v-if="loading" />

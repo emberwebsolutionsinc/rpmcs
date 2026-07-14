@@ -31,6 +31,8 @@ import AgentDetailsView from "@/views/agent-management/AgentDetailsView.vue";
 
 import ClientsView from "@/views/client-management/ClientsView.vue";
 import ClientDetailsView from "@/views/client-management/ClientDetailsView.vue";
+import ClientCreateView from "@/views/client-management/ClientCreateView.vue";
+import ClientEditView from "@/views/client-management/ClientEditView.vue";
 
 import UsersView from "@/views/administration/UsersView.vue";
 import RolesView from "@/views/administration/RolesView.vue";
@@ -109,7 +111,35 @@ const router = createRouter({
                 title: "Client Management",
             },
         },
-        
+
+        {
+            path: "/client-management/clients/create",
+            name: "client-create",
+            component: ClientCreateView,
+            meta: {
+                requiresAuth: true,
+                title: "Add Client",
+            },
+        },
+        {
+            path: "/client-management/clients/:id/edit",
+            name: "client-edit",
+            component: ClientEditView,
+            meta: {
+                requiresAuth: true,
+                title: "Edit Client",
+            },
+        },
+        {
+            path: "/client-management/clients/:id",
+            name: "client-details",
+            component: ClientDetailsView,
+            meta: {
+                requiresAuth: true,
+                title: "Client Details",
+            },
+        },
+
         {
             path: "/client-management/clients/:id",
             name: "client-details",

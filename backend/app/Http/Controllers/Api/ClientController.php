@@ -84,16 +84,6 @@ class ClientController extends Controller
             'documents.uploadedBy',
         ]);
 
-        /*
-        |--------------------------------------------------------------------------
-        | Reusable Collection Amount Resolver
-        |--------------------------------------------------------------------------
-        |
-        | This supports the possible amount column names currently used in RPMCS.
-        | The first non-null value will be used.
-        |
-        */
-
         $getCollectionAmount = function ($collection): float {
             return (float) (
                 $collection->amount_received
@@ -625,13 +615,16 @@ class ClientController extends Controller
         ]);
     }
 
-    public function update(UpdateClientRequest $request, Client $client): JsonResponse
-    {
-        $client = $this->clientService->update($client, $request->validated());
+   public function update( UpdateClientRequest $request, Client $client): JsonResponse
+   {
+        $updatedClient = $this->clientService->update(
+            $client,
+            $request->validated()
+        );
 
         return response()->json([
             'message' => 'Client updated successfully.',
-            'data' => $client,
+            'data' => $updatedClient,
         ]);
     }
 

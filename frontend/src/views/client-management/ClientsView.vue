@@ -138,8 +138,10 @@ const viewClient = (client) => {
 };
 
 const createClient = () => {
-    router.push("/client-management/clients/create");
-};
+    router.push({
+        name: "client-create",
+    });
+};  
 
 onMounted(fetchClients);
 </script>

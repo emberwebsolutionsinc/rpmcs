@@ -18,14 +18,20 @@ class Client extends Model
         'last_name',
         'suffix',
         'birthdate',
+        'gender',
         'civil_status',
         'nationality',
-        'tin',
-        'email',
         'contact_number',
-        'telephone_number',
+        'email',
         'address',
+        'occupation',
+        'employer',
+        'tin',
         'status',
+    ];
+
+    protected $casts = [
+        'birthdate' => 'date',
     ];
 
     public function reservations(): HasMany

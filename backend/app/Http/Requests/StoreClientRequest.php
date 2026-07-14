@@ -30,4 +30,27 @@ class StoreClientRequest extends FormRequest
             'status' => ['nullable', 'in:active,inactive'],
         ];
     }
+
+     public function messages(): array
+    {
+        return [
+            'first_name.required' =>
+                'First name is required.',
+
+            'last_name.required' =>
+                'Last name is required.',
+
+            'client_code.unique' =>
+                'This client code is already in use.',
+
+            'email.email' =>
+                'Enter a valid email address.',
+
+            'birthdate.before_or_equal' =>
+                'Birthdate cannot be in the future.',
+
+            'status.in' =>
+                'Select a valid client status.',
+        ];
+    }
 }
