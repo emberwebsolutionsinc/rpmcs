@@ -29,35 +29,21 @@ defineEmits(["close"]);
 const route = useRoute();
 
 const isActive = (path) => {
-    if (path === "/property-management/projects") {
-        return route.path.startsWith("/property-management/projects");
-    }
+    const groupedPaths = [
+        "/property-management/projects",
+        "/client-management/clients",
+        "/agent-management/agents",
+    ];
 
-    if (path === "/agent-management/agents") {
-        return route.path.startsWith("/agent-management/agents");
+    if (groupedPaths.includes(path)) {
+        return route.path.startsWith(path);
     }
 
     return route.path === path;
 };
 
-const isPropertyRoute = computed(() =>
-    route.path.startsWith("/property-management")
-);
-
-const isClientRoute = computed(() =>
-    route.path.startsWith("/client-management")
-);
-
-const isAgentRoute = computed(() =>
-    route.path.startsWith("/agent-management")
-);
-
 const isSalesRoute = computed(() =>
     route.path.startsWith("/sales-management")
-);
-
-const isCommissionsRoute = computed(() =>
-    route.path.startsWith("/commission-management")
 );
 
 const isReportsRoute = computed(() =>
@@ -69,26 +55,30 @@ const isAdministrationRoute = computed(() =>
 );
 
 const openMenus = ref({
-    property: false,
-    clients: false,
-    agents: false,
     sales: false,
-    commissions: false,
     reports: false,
     administration: false,
 });
 
 const syncOpenMenusWithRoute = () => {
-    if (isPropertyRoute.value) openMenus.value.property = true;
-    if (isClientRoute.value) openMenus.value.clients = true;
-    if (isAgentRoute.value) openMenus.value.agents = true;
-    if (isSalesRoute.value) openMenus.value.sales = true;
-    if (isCommissionsRoute.value) openMenus.value.commissions = true;
-    if (isReportsRoute.value) openMenus.value.reports = true;
-    if (isAdministrationRoute.value) openMenus.value.administration = true;
+    if (isSalesRoute.value) {
+        openMenus.value.sales = true;
+    }
+
+    if (isReportsRoute.value) {
+        openMenus.value.reports = true;
+    }
+
+    if (isAdministrationRoute.value) {
+        openMenus.value.administration = true;
+    }
 };
 
-watch(() => route.path, syncOpenMenusWithRoute, { immediate: true });
+watch(
+    () => route.path,
+    syncOpenMenusWithRoute,
+    { immediate: true }
+);
 
 const toggleMenu = (menu) => {
     openMenus.value[menu] = !openMenus.value[menu];
@@ -109,10 +99,11 @@ const linkClass = (path) => {
 
 <template>
     <div>
+        <!-- Mobile overlay -->
         <div
             v-if="open"
-            @click="$emit('close')"
             class="fixed inset-0 z-40 bg-black/40 lg:hidden"
+            @click="$emit('close')"
         />
 
         <aside
@@ -120,15 +111,21 @@ const linkClass = (path) => {
             :class="open ? 'translate-x-0' : '-translate-x-full'"
         >
             <div class="flex h-full flex-col">
+                <!-- Sidebar header -->
                 <div class="border-b border-emerald-700 p-6">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-3">
-                            <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-emerald-700">
+                            <div
+                                class="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-emerald-700"
+                            >
                                 <Building2 class="h-7 w-7" />
                             </div>
 
                             <div>
-                                <h1 class="text-xl font-bold">RPMCS</h1>
+                                <h1 class="text-xl font-bold">
+                                    RPMCS
+                                </h1>
+
                                 <p class="text-xs text-emerald-200">
                                     Property Management
                                 </p>
@@ -136,135 +133,86 @@ const linkClass = (path) => {
                         </div>
 
                         <button
-                            @click="$emit('close')"
+                            type="button"
                             class="rounded-lg p-2 hover:bg-emerald-700 lg:hidden"
+                            aria-label="Close sidebar"
+                            @click="$emit('close')"
                         >
                             <X class="h-5 w-5" />
                         </button>
                     </div>
                 </div>
 
+                <!-- Sidebar navigation -->
                 <nav class="flex-1 space-y-2 overflow-y-auto p-4 text-sm">
+                    <!-- Dashboard -->
                     <RouterLink
                         to="/dashboard"
-                        @click="$emit('close')"
                         class="flex items-center gap-3 rounded-lg px-4 py-3 transition"
                         :class="linkClass('/dashboard')"
+                        @click="$emit('close')"
                     >
                         <LayoutDashboard class="h-5 w-5" />
-                        Dashboard
+                        <span>Dashboard</span>
                     </RouterLink>
 
                     <!-- Property Management -->
-                    <button
-                        @click="toggleMenu('property')"
-                        class="flex w-full items-center justify-between rounded-lg px-4 py-3 transition"
-                        :class="menuButtonClass(isPropertyRoute)"
+                    <RouterLink
+                        to="/property-management/projects"
+                        class="flex items-center gap-3 rounded-lg px-4 py-3 transition"
+                        :class="
+                            linkClass('/property-management/projects')
+                        "
+                        @click="$emit('close')"
                     >
-                        <span class="flex items-center gap-3">
-                            <Building2 class="h-5 w-5" />
-                            Property Management
-                        </span>
-
-                        <ChevronDown
-                            class="h-4 w-4 transition"
-                            :class="{ 'rotate-180': openMenus.property }"
-                        />
-                    </button>
-
-                    <div
-                        v-show="openMenus.property"
-                        class="ml-4 space-y-1 sm:ml-6"
-                    >
-                        <RouterLink
-                            @click="$emit('close')"
-                            to="/property-management/projects"
-                            class="flex items-center gap-3 rounded-lg px-4 py-2 transition"
-                            :class="linkClass('/property-management/projects')"
-                        >
-                            <Building2 class="h-4 w-4" />
-                            Projects
-                        </RouterLink>
-                    </div>
+                        <Building2 class="h-5 w-5" />
+                        <span>Property Management</span>
+                    </RouterLink>
 
                     <!-- Client Management -->
-                    <button
-                        @click="toggleMenu('clients')"
-                        class="flex w-full items-center justify-between rounded-lg px-4 py-3 transition"
-                        :class="menuButtonClass(isClientRoute)"
+                    <RouterLink
+                        to="/client-management/clients"
+                        class="flex items-center gap-3 rounded-lg px-4 py-3 transition"
+                        :class="
+                            linkClass('/client-management/clients')
+                        "
+                        @click="$emit('close')"
                     >
-                        <span class="flex items-center gap-3">
-                            <Users class="h-5 w-5" />
-                            Client Management
-                        </span>
-
-                        <ChevronDown
-                            class="h-4 w-4 transition"
-                            :class="{ 'rotate-180': openMenus.clients }"
-                        />
-                    </button>
-
-                    <div
-                        v-show="openMenus.clients"
-                        class="ml-4 space-y-1 sm:ml-6"
-                    >
-                        <RouterLink
-                            @click="$emit('close')"
-                            to="/client-management/clients"
-                            class="flex items-center gap-3 rounded-lg px-4 py-2 transition"
-                            :class="linkClass('/client-management/clients')"
-                        >
-                            <Users class="h-4 w-4" />
-                            Clients
-                        </RouterLink>
-                    </div>
+                        <Users class="h-5 w-5" />
+                        <span>Client Management</span>
+                    </RouterLink>
 
                     <!-- Agent Management -->
-                    <button
-                        @click="toggleMenu('agents')"
-                        class="flex w-full items-center justify-between rounded-lg px-4 py-3 transition"
-                        :class="menuButtonClass(isAgentRoute)"
+                    <RouterLink
+                        to="/agent-management/agents"
+                        class="flex items-center gap-3 rounded-lg px-4 py-3 transition"
+                        :class="
+                            linkClass('/agent-management/agents')
+                        "
+                        @click="$emit('close')"
                     >
-                        <span class="flex items-center gap-3">
-                            <UserCog class="h-5 w-5" />
-                            Agent Management
-                        </span>
-
-                        <ChevronDown
-                            class="h-4 w-4 transition"
-                            :class="{ 'rotate-180': openMenus.agents }"
-                        />
-                    </button>
-
-                    <div
-                        v-show="openMenus.agents"
-                        class="ml-4 space-y-1 sm:ml-6"
-                    >
-                        <RouterLink
-                            @click="$emit('close')"
-                            to="/agent-management/agents"
-                            class="flex items-center gap-3 rounded-lg px-4 py-2 transition"
-                            :class="linkClass('/agent-management/agents')"
-                        >
-                            <UserCog class="h-4 w-4" />
-                            Agents
-                        </RouterLink>
-                    </div>
+                        <UserCog class="h-5 w-5" />
+                        <span>Agent Management</span>
+                    </RouterLink>
 
                     <!-- Sales Management -->
                     <button
-                        @click="toggleMenu('sales')"
+                        type="button"
                         class="flex w-full items-center justify-between rounded-lg px-4 py-3 transition"
                         :class="menuButtonClass(isSalesRoute)"
+                        :aria-expanded="openMenus.sales"
+                        @click="toggleMenu('sales')"
                     >
                         <span class="flex items-center gap-3">
                             <FileSignature class="h-5 w-5" />
-                            Sales Management
+                            <span>Sales Management</span>
                         </span>
 
                         <ChevronDown
-                            class="h-4 w-4 transition"
-                            :class="{ 'rotate-180': openMenus.sales }"
+                            class="h-4 w-4 transition-transform duration-200"
+                            :class="{
+                                'rotate-180': openMenus.sales,
+                            }"
                         />
                     </button>
 
@@ -273,94 +221,91 @@ const linkClass = (path) => {
                         class="ml-4 space-y-1 sm:ml-6"
                     >
                         <RouterLink
-                            @click="$emit('close')"
                             to="/sales-management/reservations"
                             class="flex items-center gap-3 rounded-lg px-4 py-2 transition"
-                            :class="linkClass('/sales-management/reservations')"
+                            :class="
+                                linkClass(
+                                    '/sales-management/reservations'
+                                )
+                            "
+                            @click="$emit('close')"
                         >
                             <FileSignature class="h-4 w-4" />
-                            Reservations
+                            <span>Reservations</span>
                         </RouterLink>
 
                         <RouterLink
-                            @click="$emit('close')"
                             to="/sales-management/sales"
                             class="flex items-center gap-3 rounded-lg px-4 py-2 transition"
-                            :class="linkClass('/sales-management/sales')"
+                            :class="
+                                linkClass('/sales-management/sales')
+                            "
+                            @click="$emit('close')"
                         >
                             <BadgeDollarSign class="h-4 w-4" />
-                            Sales
+                            <span>Sales</span>
                         </RouterLink>
 
                         <RouterLink
-                            @click="$emit('close')"
                             to="/sales-management/collections"
                             class="flex items-center gap-3 rounded-lg px-4 py-2 transition"
-                            :class="linkClass('/sales-management/collections')"
+                            :class="
+                                linkClass(
+                                    '/sales-management/collections'
+                                )
+                            "
+                            @click="$emit('close')"
                         >
                             <Wallet class="h-4 w-4" />
-                            Collections
+                            <span>Collections</span>
                         </RouterLink>
 
                         <RouterLink
-                            @click="$emit('close')"
                             to="/sales-management/overdue-accounts"
                             class="flex items-center gap-3 rounded-lg px-4 py-2 transition"
-                            :class="linkClass('/sales-management/overdue-accounts')"
+                            :class="
+                                linkClass(
+                                    '/sales-management/overdue-accounts'
+                                )
+                            "
+                            @click="$emit('close')"
                         >
                             <AlertTriangle class="h-4 w-4" />
-                            Overdue Accounts
+                            <span>Overdue Accounts</span>
                         </RouterLink>
                     </div>
 
                     <!-- Commission Management -->
-                    <button
-                        @click="toggleMenu('commissions')"
-                        class="flex w-full items-center justify-between rounded-lg px-4 py-3 transition"
-                        :class="menuButtonClass(isCommissionsRoute)"
+                    <RouterLink
+                        to="/reports/commission-payments"
+                        class="flex items-center gap-3 rounded-lg px-4 py-3 transition"
+                        :class="
+                            linkClass('/reports/commission-payments')
+                        "
+                        @click="$emit('close')"
                     >
-                        <span class="flex items-center gap-3">
-                            <BadgeDollarSign class="h-5 w-5" />
-                            Commission Management
-                        </span>
-
-                        <ChevronDown
-                            class="h-4 w-4 transition"
-                            :class="{ 'rotate-180': openMenus.commissions }"
-                        />
-                    </button>
-
-                    <div
-                        v-show="openMenus.commissions"
-                        class="ml-4 space-y-1 sm:ml-6"
-                    >
-
-
-                        <RouterLink
-                            @click="$emit('close')"
-                            to="/reports/commission-payments"
-                            class="flex items-center gap-3 rounded-lg px-4 py-2 transition"
-                            :class="linkClass('/reports/commission-payments')"
-                        >
-                            <BadgeDollarSign class="h-4 w-4" />
-                            Commission Payments
-                        </RouterLink>
-                    </div>
+                        <BadgeDollarSign class="h-5 w-5" />
+                        <span>Commission Management</span>
+                    </RouterLink>
 
                     <!-- Reports -->
                     <button
-                        @click="toggleMenu('reports')"
+                        type="button"
                         class="flex w-full items-center justify-between rounded-lg px-4 py-3 transition"
                         :class="menuButtonClass(isReportsRoute)"
+                        :aria-expanded="openMenus.reports"
+                        @click="toggleMenu('reports')"
                     >
                         <span class="flex items-center gap-3">
                             <BarChart3 class="h-5 w-5" />
-                            Reports
+                            <span>Reports</span>
                         </span>
 
                         <ChevronDown
-                            class="h-4 w-4 transition"
-                            :class="{ 'rotate-180': openMenus.reports }"
+                            class="h-4 w-4 transition-transform duration-200"
+                            :class="{
+                                'rotate-180': openMenus.reports,
+                            }"
                         />
                     </button>
 
@@ -369,90 +314,113 @@ const linkClass = (path) => {
                         class="ml-4 space-y-1 sm:ml-6"
                     >
                         <RouterLink
-                            @click="$emit('close')"
                             to="/reports/dashboard"
                             class="flex items-center gap-3 rounded-lg px-4 py-2 transition"
-                            :class="linkClass('/reports/dashboard')"
+                            :class="
+                                linkClass('/reports/dashboard')
+                            "
+                            @click="$emit('close')"
                         >
                             <BarChart3 class="h-4 w-4" />
-                            Reports Dashboard
+                            <span>Reports Dashboard</span>
                         </RouterLink>
 
                         <RouterLink
-                            @click="$emit('close')"
                             to="/reports/collections"
                             class="flex items-center gap-3 rounded-lg px-4 py-2 transition"
-                            :class="linkClass('/reports/collections')"
+                            :class="
+                                linkClass('/reports/collections')
+                            "
+                            @click="$emit('close')"
                         >
                             <BarChart3 class="h-4 w-4" />
-                            Collections Report
+                            <span>Collections Report</span>
                         </RouterLink>
 
                         <RouterLink
-                            @click="$emit('close')"
                             to="/reports/sales"
                             class="flex items-center gap-3 rounded-lg px-4 py-2 transition"
                             :class="linkClass('/reports/sales')"
+                            @click="$emit('close')"
                         >
                             <BarChart3 class="h-4 w-4" />
-                            Sales Report
+                            <span>Sales Report</span>
                         </RouterLink>
 
                         <RouterLink
-                            @click="$emit('close')"
                             to="/reports/aging"
                             class="flex items-center gap-3 rounded-lg px-4 py-2 transition"
                             :class="linkClass('/reports/aging')"
+                            @click="$emit('close')"
                         >
                             <BarChart3 class="h-4 w-4" />
-                            Aging Report
+                            <span>Aging Report</span>
                         </RouterLink>
 
                         <RouterLink
-                            @click="$emit('close')"
                             to="/reports/agent-commissions"
                             class="flex items-center gap-3 rounded-lg px-4 py-2 transition"
-                            :class="linkClass('/reports/agent-commissions')"
+                            :class="
+                                linkClass(
+                                    '/reports/agent-commissions'
+                                )
+                            "
+                            @click="$emit('close')"
                         >
                             <BarChart3 class="h-4 w-4" />
-                            Agent Commission Report
+                            <span>Agent Commission Report</span>
                         </RouterLink>
 
                         <RouterLink
-                            @click="$emit('close')"
                             to="/reports/commission-payments"
                             class="flex items-center gap-3 rounded-lg px-4 py-2 transition"
-                            :class="linkClass('/reports/commission-payments')"
+                            :class="
+                                linkClass(
+                                    '/reports/commission-payments'
+                                )
+                            "
+                            @click="$emit('close')"
                         >
                             <BarChart3 class="h-4 w-4" />
-                            Commission Payment Report
+                            <span>Commission Payment Report</span>
                         </RouterLink>
 
                         <RouterLink
-                            @click="$emit('close')"
                             to="/reports/agent-commission-ledger"
                             class="flex items-center gap-3 rounded-lg px-4 py-2 transition"
-                            :class="linkClass('/reports/agent-commission-ledger')"
+                            :class="
+                                linkClass(
+                                    '/reports/agent-commission-ledger'
+                                )
+                            "
+                            @click="$emit('close')"
                         >
                             <BarChart3 class="h-4 w-4" />
-                            Agent Commission Ledger
+                            <span>Agent Commission Ledger</span>
                         </RouterLink>
                     </div>
 
                     <!-- Administration -->
                     <button
-                        @click="toggleMenu('administration')"
+                        type="button"
                         class="flex w-full items-center justify-between rounded-lg px-4 py-3 transition"
-                        :class="menuButtonClass(isAdministrationRoute)"
+                        :class="
+                            menuButtonClass(isAdministrationRoute)
+                        "
+                        :aria-expanded="openMenus.administration"
+                        @click="toggleMenu('administration')"
                     >
                         <span class="flex items-center gap-3">
                             <Settings class="h-5 w-5" />
-                            Administration
+                            <span>Administration</span>
                         </span>
 
                         <ChevronDown
-                            class="h-4 w-4 transition"
-                            :class="{ 'rotate-180': openMenus.administration }"
+                            class="h-4 w-4 transition-transform duration-200"
+                            :class="{
+                                'rotate-180':
+                                    openMenus.administration,
+                            }"
                         />
                     </button>
 
@@ -461,44 +429,53 @@ const linkClass = (path) => {
                         class="ml-4 space-y-1 sm:ml-6"
                     >
                         <RouterLink
-                            @click="$emit('close')"
                             to="/administration/users"
                             class="flex items-center gap-3 rounded-lg px-4 py-2 transition"
-                            :class="linkClass('/administration/users')"
+                            :class="
+                                linkClass('/administration/users')
+                            "
+                            @click="$emit('close')"
                         >
-                            <Settings class="h-4 w-4" />
-                            Users
+                            <Users class="h-4 w-4" />
+                            <span>Users</span>
                         </RouterLink>
 
                         <RouterLink
-                            @click="$emit('close')"
                             to="/administration/roles"
                             class="flex items-center gap-3 rounded-lg px-4 py-2 transition"
-                            :class="linkClass('/administration/roles')"
+                            :class="
+                                linkClass('/administration/roles')
+                            "
+                            @click="$emit('close')"
                         >
-                            <Settings class="h-4 w-4" />
-                            Roles
+                            <UserCog class="h-4 w-4" />
+                            <span>Roles</span>
                         </RouterLink>
 
                         <RouterLink
-                            @click="$emit('close')"
                             to="/administration/permissions"
                             class="flex items-center gap-3 rounded-lg px-4 py-2 transition"
-                            :class="linkClass('/administration/permissions')"
+                            :class="
+                                linkClass(
+                                    '/administration/permissions'
+                                )
+                            "
+                            @click="$emit('close')"
                         >
                             <Settings class="h-4 w-4" />
-                            Permissions
+                            <span>Permissions</span>
                         </RouterLink>
                     </div>
                 </nav>
 
+                <!-- Sidebar footer -->
                 <div class="border-t border-emerald-700 p-4">
                     <div class="text-xs text-emerald-200">
                         RPMCS v1.0.0
                     </div>
 
                     <div class="mt-1 text-xs text-emerald-300">
-                        Property Management & Collection System
+                        Property Management &amp; Collection System
                     </div>
                 </div>
             </div>
