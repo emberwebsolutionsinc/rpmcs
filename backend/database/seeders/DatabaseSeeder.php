@@ -13,6 +13,7 @@ class DatabaseSeeder extends Seeder
             PropertyTypeSeeder::class,
             BantogIndustrialSeeder::class,
             ClientAgentSeeder::class,
+            UserSeeder::class,
         ]);
     }
 }

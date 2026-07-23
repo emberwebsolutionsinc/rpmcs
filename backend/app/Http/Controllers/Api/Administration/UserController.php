@@ -11,164 +11,139 @@ use App\Http\Resources\Administration\UserResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Role;
+
+use Throwable;
+
 
 class UserController extends Controller
 {
-    /**
-     * Display a paginated list of users.
-     */
-    public function index(Request $request): JsonResponse
-    {
-        $validated = $request->validate([
-            'search' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
+public function index(
+    Request $request
+): AnonymousResourceCollection {
 
-            'role_id' => [
-                'nullable',
-                'integer',
-                'exists:roles,id',
-            ],
+    $validated = $request->validate([
+        'search' => [
+            'nullable',
+            'string',
+            'max:255',
+        ],
 
-            'status' => [
-                'nullable',
-                'in:active,inactive',
-            ],
+        'role' => [
+            'nullable',
+            'string',
+            'max:255',
+        ],
 
-            'per_page' => [
-                'nullable',
-                'integer',
-                'in:10,25,50,100',
-            ],
+        'status' => [
+            'nullable',
+            'in:active,inactive',
+        ],
 
-            'page' => [
-                'nullable',
-                'integer',
-                'min:1',
-            ],
-        ]);
+        'sort_by' => [
+            'nullable',
+            'in:name,email,created_at,updated_at',
+        ],
 
-        $perPage =
-            (int) ($validated['per_page'] ?? 10);
+        'sort_direction' => [
+            'nullable',
+            'in:asc,desc',
+        ],
 
-        $query = User::query()
-            ->with([
-                'roles:id,name,guard_name',
-            ])
-            ->latest('id');
+        'per_page' => [
+            'nullable',
+            'integer',
+            'min:5',
+            'max:100',
+        ],
+    ]);
 
-        if (!empty($validated['search'])) {
-            $search =
-                trim($validated['search']);
+    $search = trim($validated['search'] ?? '');
 
-            $query->where(
-                function ($subQuery) use ($search) {
+    $role = $validated['role'] ?? null;
+
+    $status = $validated['status'] ?? null;
+
+    $sortBy = $validated['sort_by'] ?? 'created_at';
+
+    $sortDirection = $validated['sort_direction'] ?? 'desc';
+
+    $perPage = $validated['per_page'] ?? 15;
+
+    $users = User::query()
+        ->with([
+            'roles:id,name,guard_name',
+        ])
+
+        ->when(
+            $search !== '',
+            function ($query) use ($search) {
+                $query->where(function ($subQuery) use ($search) {
                     $subQuery
-                        ->where(
-                            'name',
-                            'like',
-                            "%{$search}%"
-                        )
-                        ->orWhere(
-                            'email',
-                            'like',
-                            "%{$search}%"
-                        );
-                }
-            );
-        }
+                        ->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                });
+            }
+        )
 
-        if (!empty($validated['role_id'])) {
-            $roleId =
-                (int) $validated['role_id'];
+        ->when(
+            $role,
+            function ($query) use ($role) {
+                $query->whereHas('roles', function ($roleQuery) use ($role) {
+                    $roleQuery->where('name', $role);
+                });
+            }
+        )
 
-            $query->whereHas(
-                'roles',
-                fn ($roleQuery) =>
-                $roleQuery->where(
-                    'roles.id',
-                    $roleId
-                )
-            );
-        }
+        ->when(
+            $status === 'active',
+            fn ($query) => $query->where('is_active', true)
+        )
 
-        if (
-            ($validated['status'] ?? null) ===
-            'active'
-        ) {
-            $query->where('is_active', true);
-        }
+        ->when(
+            $status === 'inactive',
+            fn ($query) => $query->where('is_active', false)
+        )
 
-        if (
-            ($validated['status'] ?? null) ===
-            'inactive'
-        ) {
-            $query->where('is_active', false);
-        }
+        ->orderBy($sortBy, $sortDirection)
 
-        $users = $query
-            ->paginate($perPage)
-            ->withQueryString();
+        ->paginate($perPage)
 
-        return response()->json([
-            'data' => UserResource::collection(
-                $users->getCollection()
-            ),
+        ->withQueryString();
 
-            'current_page' =>
-                $users->currentPage(),
+    return UserResource::collection($users);
+}
 
-            'last_page' =>
-                $users->lastPage(),
+public function options(
+    Request $request
+): JsonResponse {
 
-            'per_page' =>
-                $users->perPage(),
-
-            'total' =>
-                $users->total(),
-
-            'from' =>
-                $users->firstItem(),
-
-            'to' =>
-                $users->lastItem(),
-
-            'summary' => [
-                'total_users' =>
-                    User::query()->count(),
-
-                'active_users' =>
-                    User::query()
-                        ->where(
-                            'is_active',
-                            true
-                        )
-                        ->count(),
-
-                'inactive_users' =>
-                    User::query()
-                        ->where(
-                            'is_active',
-                            false
-                        )
-                        ->count(),
-
-                'super_admins' =>
-                    User::query()
-                        ->role('super-admin')
-                        ->count(),
-            ],
+    $roles = Role::query()
+        ->where('guard_name', 'web')
+        ->orderBy('name')
+        ->get([
+            'id',
+            'name',
         ]);
-    }
 
-    /**
-     * Store a newly created user.
-     */
+    return response()->json([
+        'roles' => $roles,
+
+        'statuses' => [
+            [
+                'value' => 'active',
+                'label' => 'Active',
+            ],
+            [
+                'value' => 'inactive',
+                'label' => 'Inactive',
+            ],
+        ],
+    ]);
+}
+
     public function store(
         StoreUserRequest $request
     ): JsonResponse {
@@ -176,27 +151,20 @@ class UserController extends Controller
 
         $user = DB::transaction(
             function () use ($validated) {
-                $user = User::query()->create([
+                $user = User::create([
                     'name' => $validated['name'],
+
                     'email' => $validated['email'],
-                    'password' =>
-                        $validated['password'],
+
+                    'password' => $validated['password'],
+
                     'is_active' =>
-                        $validated['is_active'],
+                        $validated['is_active'] ?? true,
                 ]);
 
-                $roles = Role::query()
-                    ->whereIn(
-                        'id',
-                        $validated['roles']
-                    )
-                    ->where(
-                        'guard_name',
-                        'web'
-                    )
-                    ->get();
-
-                $user->syncRoles($roles);
+                $user->syncRoles(
+                    $validated['roles']
+                );
 
                 return $user;
             }
@@ -207,250 +175,203 @@ class UserController extends Controller
         ]);
 
         return response()->json([
-            'message' =>
-                'User created successfully.',
+            'message' => 'User created successfully.',
 
-            'data' =>
-                new UserResource($user),
+            'user' => new UserResource($user),
         ], 201);
     }
 
-    /**
-     * Display the specified user.
-     */
-    public function show(User $user): JsonResponse
-    {
-        $user->load([
-            'roles:id,name,guard_name',
-        ]);
+public function show(
+    Request $request,
+    User $user
+): JsonResponse {
 
-        return response()->json([
-            'data' =>
-                new UserResource($user),
-        ]);
-    }
+    $user->load([
+        'roles:id,name,guard_name',
+    ]);
 
-    /**
-     * Update the specified user.
-     */
+    return response()->json([
+        'user' => new UserResource($user),
+    ]);
+}
+
     public function update(
         UpdateUserRequest $request,
         User $user
     ): JsonResponse {
-        $validated = $request->validated();
+        $validated =
+            $request->validated();
 
-        $authenticatedUser =
-            $request->user();
+        try {
+            DB::beginTransaction();
 
-        $selectedRoles = Role::query()
-            ->whereIn(
-                'id',
-                $validated['roles']
-            )
-            ->where(
-                'guard_name',
-                'web'
-            )
-            ->get();
+            $user->update([
+                'name' =>
+                    $validated[
+                        'name'
+                    ],
 
-        $selectedRoleNames =
-            $selectedRoles->pluck('name');
+                'email' =>
+                    $validated[
+                        'email'
+                    ],
 
-        if (
-            $authenticatedUser?->id === $user->id &&
-            !$selectedRoleNames->contains(
-                'super-admin'
-            ) &&
-            $user->hasRole('super-admin')
-        ) {
-            throw ValidationException::withMessages([
-                'roles' => [
-                    'You cannot remove your own super-admin role.',
-                ],
+                'is_active' =>
+                    (bool) $validated[
+                        'is_active'
+                    ],
             ]);
-        }
 
-        if (
-            $authenticatedUser?->id === $user->id &&
-            $validated['is_active'] === false
-        ) {
-            throw ValidationException::withMessages([
-                'is_active' => [
-                    'You cannot deactivate your own account.',
-                ],
+            $roles = Role::query()
+                ->whereIn(
+                    'id',
+                    $validated[
+                        'roles'
+                    ]
+                )
+                ->get();
+
+            $user->syncRoles(
+                $roles
+            );
+
+            DB::commit();
+
+            $updatedUser =
+                $user
+                    ->fresh()
+                    ->load('roles');
+
+            return response()->json([
+                'message' =>
+                    'User updated successfully.',
+
+                'data' =>
+                    new UserResource(
+                        $updatedUser
+                    ),
             ]);
+        } catch (Throwable $error) {
+            DB::rollBack();
+
+            report($error);
+
+            return response()->json([
+                'message' =>
+                    'Failed to update the user.',
+
+                'error' =>
+                    config(
+                        'app.debug'
+                    )
+                        ? $error->getMessage()
+                        : null,
+            ], 500);
         }
+    }
 
-        DB::transaction(
-            function () use (
-                $user,
-                $validated,
-                $selectedRoles
-            ) {
-                $user->update([
-                    'name' =>
-                        $validated['name'],
+    public function updateStatus(
+    UpdateUserStatusRequest $request,
+    User $user
+): JsonResponse {
+    $authenticatedUser = $request->user();
 
-                    'email' =>
-                        $validated['email'],
+    $isActive = $request->boolean(
+        'is_active'
+    );
 
-                    'is_active' =>
-                        $validated['is_active'],
-                ]);
+    /*
+     * Prevent the authenticated user from
+     * deactivating their own account.
+     */
+    if (
+        $authenticatedUser->is($user) &&
+        ! $isActive
+    ) {
+        return response()->json([
+            'message' =>
+                'You cannot deactivate your own account.',
+        ], 422);
+    }
 
-                $user->syncRoles(
-                    $selectedRoles
-                );
-            }
+    /*
+     * Determine which permission is required.
+     */
+    $requiredPermission = $isActive
+        ? 'administration.users.activate'
+        : 'administration.users.deactivate';
+
+    /*
+     * Super Administrator bypass.
+     */
+    $isSuperAdministrator =
+        $authenticatedUser->hasRole(
+            'Super Administrator'
         );
 
-        $user->load([
-            'roles:id,name,guard_name',
-        ]);
-
+    if (
+        ! $isSuperAdministrator &&
+        ! $authenticatedUser->can(
+            $requiredPermission
+        )
+    ) {
         return response()->json([
-            'message' =>
-                'User updated successfully.',
+            'message' => $isActive
+                ? 'You are not authorized to activate users.'
+                : 'You are not authorized to deactivate users.',
 
-            'data' =>
-                new UserResource($user),
-        ]);
+            'code' => 'USER_STATUS_FORBIDDEN',
+
+            'required_permission' =>
+                $requiredPermission,
+        ], 403);
     }
 
-    /**
-     * Update account status.
+    $user->update([
+        'is_active' => $isActive,
+    ]);
+
+    /*
+     * Revoke all tokens when deactivated.
      */
-    public function updateStatus(
-        UpdateUserStatusRequest $request,
-        User $user
-    ): JsonResponse {
-        $validated = $request->validated();
-
-        if (
-            $request->user()?->id === $user->id &&
-            $validated['is_active'] === false
-        ) {
-            throw ValidationException::withMessages([
-                'is_active' => [
-                    'You cannot deactivate your own account.',
-                ],
-            ]);
-        }
-
-        if (
-            $user->hasRole('super-admin') &&
-            $validated['is_active'] === false
-        ) {
-            throw ValidationException::withMessages([
-                'is_active' => [
-                    'A super-admin account cannot be deactivated.',
-                ],
-            ]);
-        }
-
-        $user->update([
-            'is_active' =>
-                $validated['is_active'],
-        ]);
-
-        $user->load([
-            'roles:id,name,guard_name',
-        ]);
-
-        return response()->json([
-            'message' =>
-                $user->is_active
-                    ? 'User activated successfully.'
-                    : 'User deactivated successfully.',
-
-            'data' =>
-                new UserResource($user),
-        ]);
+    if (! $isActive) {
+        $user->tokens()->delete();
     }
 
-    /**
-     * Reset a user's password.
-     */
+    $user->load([
+        'roles:id,name,guard_name',
+    ]);
+
+    return response()->json([
+        'message' => $isActive
+            ? 'User activated successfully.'
+            : 'User deactivated successfully.',
+
+        'user' => new UserResource(
+            $user
+        ),
+    ]);
+}
+
     public function resetPassword(
         ResetUserPasswordRequest $request,
         User $user
     ): JsonResponse {
+        $validated = $request->validated();
+
         $user->update([
-            'password' =>
-                $request->validated('password'),
+            'password' => $validated['password'],
         ]);
 
         /*
-         * Optional:
-         * Revoke all Sanctum tokens after password reset.
+         * Revoke all tokens belonging to the user
+         * whose password was reset.
          */
         $user->tokens()->delete();
 
         return response()->json([
             'message' =>
-                'Password reset successfully.',
-        ]);
-    }
-
-    /**
-     * Remove the specified user.
-     */
-    public function destroy(
-        Request $request,
-        User $user
-    ): JsonResponse {
-        if (
-            $request->user()?->id === $user->id
-        ) {
-            return response()->json([
-                'message' =>
-                    'You cannot delete your own account.',
-            ], 422);
-        }
-
-        if ($user->hasRole('super-admin')) {
-            return response()->json([
-                'message' =>
-                    'A super-admin account cannot be deleted.',
-            ], 422);
-        }
-
-        DB::transaction(
-            function () use ($user) {
-                $user->syncRoles([]);
-
-                $user->tokens()->delete();
-
-                $user->delete();
-            }
-        );
-
-        return response()->json([
-            'message' =>
-                'User deleted successfully.',
-        ]);
-    }
-
-    /**
-     * Return roles for user forms and filters.
-     */
-    public function options(): JsonResponse
-    {
-        $roles = Role::query()
-            ->select([
-                'id',
-                'name',
-                'guard_name',
-            ])
-            ->where(
-                'guard_name',
-                'web'
-            )
-            ->orderBy('name')
-            ->get();
-
-        return response()->json([
-            'roles' => $roles,
+                'User password reset successfully.',
         ]);
     }
 }

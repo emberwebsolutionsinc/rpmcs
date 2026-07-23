@@ -11,12 +11,6 @@ class UpdateUserStatusRequest extends FormRequest
         return true;
     }
 
-    protected function prepareForValidation(): void
-    {
-        $this->merge([
-            'is_active' => $this->boolean('is_active'),
-        ]);
-    }
 
     public function rules(): array
     {
@@ -25,6 +19,15 @@ class UpdateUserStatusRequest extends FormRequest
                 'required',
                 'boolean',
             ],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'is_active.required' => 'The account status is required.',
+
+            'is_active.boolean' => 'The account status must be true or false.',
         ];
     }
 }

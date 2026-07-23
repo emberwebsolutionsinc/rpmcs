@@ -9,9 +9,12 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 use App\Models\User;
+use Illuminate\Support\Facades\Log;
+use Spatie\Permission\Models\Role;
+
+use Throwable;
 
 class RoleController extends Controller
 {
@@ -208,44 +211,64 @@ class RoleController extends Controller
         ]);
     }
 
-    public function destroy(
-        Role $role
-    ): JsonResponse {
-        if ($role->name === 'super-admin') {
+public function destroy(int $id)
+{
+    try {
+        $role = \Spatie\Permission\Models\Role::findOrFail($id);
+
+        $protectedRoles = [
+            'Super Administrator',
+            'Administrator',
+            'Owner',
+            'Accounting',
+            'Marketing',
+            'Cashier',
+            'Encoder',
+            'Agent',
+        ];
+
+        if (in_array($role->name, $protectedRoles, true)) {
             return response()->json([
-                'message' =>
-                    'The super-admin role cannot be deleted.',
+                'message' => "The {$role->name} role is a system role and cannot be deleted.",
             ], 422);
         }
 
-        $hasAssignedUsers = DB::table(
-            'model_has_roles'
+        $assignedUsersCount = \Illuminate\Support\Facades\DB::table(
+            config('permission.table_names.model_has_roles')
         )
             ->where('role_id', $role->id)
-            ->where(
-                'model_type',
-                User::class
-            )
-            ->exists();
+            ->count();
 
-        if ($hasAssignedUsers) {
+        if ($assignedUsersCount > 0) {
             return response()->json([
-                'message' =>
-                    'This role is assigned to users and cannot be deleted.',
+                'message' => "This role is assigned to {$assignedUsersCount} user(s). Remove the role from those users before deleting it.",
+                'assigned_users_count' => $assignedUsersCount,
             ], 422);
         }
 
-        DB::transaction(function () use ($role) {
-            $role->syncPermissions([]);
-            $role->delete();
-        });
-
-        app(PermissionRegistrar::class)
-            ->forgetCachedPermissions();
+        \Illuminate\Support\Facades\DB::transaction(
+            function () use ($role): void {
+                $role->syncPermissions([]);
+                $role->delete();
+            }
+        );
 
         return response()->json([
-            'message' =>
-                'Role deleted successfully.',
+            'message' => 'Role deleted successfully.',
         ]);
+    } catch (
+        \Illuminate\Database\Eloquent\ModelNotFoundException $exception
+    ) {
+        return response()->json([
+            'message' => 'Role not found.',
+        ], 404);
+    } catch (\Throwable $exception) {
+        return response()->json([
+            'message' => 'Unable to delete the role.',
+            'error' => config('app.debug')
+                ? $exception->getMessage()
+                : null,
+        ], 500);
     }
+}
 }

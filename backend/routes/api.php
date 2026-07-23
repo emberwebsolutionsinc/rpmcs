@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\LotController;
 use App\Http\Controllers\Api\ClientController;
 use App\Http\Controllers\Api\ClientManagement\ClientDocumentController;
 use App\Http\Controllers\Api\AgentController;
+
 use App\Http\Controllers\Api\AgentDocumentController;
 use App\Http\Controllers\Api\ReservationController;
 use App\Http\Controllers\Api\SaleController;
@@ -34,12 +35,20 @@ use App\Http\Controllers\Api\Reports\AgentCommissionReportController;
 use App\Http\Controllers\Api\Administration\PermissionController;
 use App\Http\Controllers\Api\Administration\RoleController;
 use App\Http\Controllers\Api\Administration\UserController;
+use App\Http\Middleware\EnsureUserIsActive;
+use App\Http\Controllers\Api\MainAgentController;
+
+
+
 
 Route::prefix('v1')->group(function () {
 
     Route::post('login', [AuthController::class, 'login']);
 
-    Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware([
+                'auth:sanctum',
+                EnsureUserIsActive::class,
+                    ])->group(function () {
 
         Route::get('me', [AuthController::class, 'me']);
         Route::post('logout', [AuthController::class, 'logout']);
@@ -192,6 +201,23 @@ Route::prefix('v1')->group(function () {
         Route::prefix('agent-management')->group(function () {
             Route::apiResource('agents', AgentController::class);
 
+
+              /*
+        |--------------------------------------------------------------------------
+        | Main Agent
+        |--------------------------------------------------------------------------
+        */
+
+             Route::post(
+                '/main-agents',
+                [MainAgentController::class, 'store']
+            );
+
+            Route::put(
+                '/main-agents/{mainAgent}',
+                [MainAgentController::class, 'update']
+            );
+
             Route::get(
                 'agents/{agent}/documents',
                 [AgentDocumentController::class, 'index']
@@ -302,7 +328,6 @@ Route::prefix('v1')->group(function () {
                     'users/{user}/status',
                     [UserController::class, 'updateStatus']
                 )
-                    ->middleware('permission:administration.users.status')
                     ->name('users.status');
 
                 Route::patch(
@@ -343,8 +368,15 @@ Route::prefix('v1')->group(function () {
                     'users/{user}',
                     [UserController::class, 'update']
                 )
-                    ->middleware('permission:administration.users.update')
+                    ->middleware('permission:administration.users.edit')
                     ->name('users.update');
+
+                Route::patch(
+                    'users/{user}',
+                    [UserController::class, 'update']
+                )
+                    ->middleware('permission:administration.users.edit')
+                    ->name('users.patch');
 
                 Route::delete(
                     'users/{user}',
@@ -353,5 +385,7 @@ Route::prefix('v1')->group(function () {
                     ->middleware('permission:administration.users.delete')
                     ->name('users.destroy');
             });
+
+
     });
 });

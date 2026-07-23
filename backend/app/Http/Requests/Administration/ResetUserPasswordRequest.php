@@ -20,9 +20,17 @@ class ResetUserPasswordRequest extends FormRequest
                 'confirmed',
                 Password::min(8)
                     ->letters()
-                    ->mixedCase()
                     ->numbers(),
             ],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'password.required' => 'The new password is required.',
+
+            'password.confirmed' => 'The password confirmation does not match.',
         ];
     }
 }

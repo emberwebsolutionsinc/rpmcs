@@ -9,6 +9,9 @@ use App\Models\Agent;
 use App\Services\AgentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class AgentController extends Controller
 {
@@ -65,6 +68,38 @@ class AgentController extends Controller
             'data' => $agent->load(['mainAgent', 'subAgents']),
         ], 201);
     }
+
+public function storeMainAgent(
+    StoreAgentRequest $request
+): JsonResponse {
+    $validated = $request->validated();
+
+    /*
+    |--------------------------------------------------------------------------
+    | Force the record to be a main agent
+    |--------------------------------------------------------------------------
+    |
+    | The Add Agent modal is intended only for creating main agents.
+    | We do not accept a parent agent from this endpoint.
+    |
+    */
+
+    $validated['agent_type'] = 'main_agent';
+    $validated['parent_agent_id'] = null;
+
+    $agent = $this->agentService->create(
+        $validated
+    );
+
+    return response()->json([
+        'message' => 'Main agent created successfully.',
+
+        'data' => $agent->load([
+            'mainAgent',
+            'subAgents',
+        ]),
+    ], 201);
+}
 
 public function show(Agent $agent): JsonResponse
 {
@@ -217,22 +252,65 @@ public function show(Agent $agent): JsonResponse
     ]);
 }
 
-    public function update(UpdateAgentRequest $request, Agent $agent): JsonResponse
-    {
-        $agent = $this->agentService->update($agent, $request->validated());
+public function update(
+    UpdateAgentRequest $request,
+    Agent $agent
+): JsonResponse {
+    if ($agent->agent_type !== 'sub_agent') {
+        return response()->json([
+            'message' =>
+                'The selected record is not a Sub-Agent.',
+        ], 422);
+    }
+
+    try {
+        $updatedAgent =
+            $this->agentService->update(
+                $agent,
+                $request->validated()
+            );
 
         return response()->json([
-            'message' => 'Agent updated successfully.',
-            'data' => $agent->load(['mainAgent', 'subAgents']),
+            'message' =>
+                'Sub-Agent updated successfully.',
+            'data' => $updatedAgent,
         ]);
-    }
+    } catch (Throwable $exception) {
+    report($exception);
+
+    return response()->json([
+        'message' => $exception->getMessage(),
+        'exception' => class_basename($exception),
+        'file' => $exception->getFile(),
+        'line' => $exception->getLine(),
+    ], 500);
+}
+}
 
     public function destroy(Agent $agent): JsonResponse
-    {
-        $this->agentService->delete($agent);
+{
+    /*
+    |--------------------------------------------------------------------------
+    | Block deletion when the agent has Sub-Agents
+    |--------------------------------------------------------------------------
+    */
 
-        return response()->json([
-            'message' => 'Agent deleted successfully.',
+    $hasSubAgents = Agent::query()
+        ->where('parent_agent_id', $agent->id)
+        ->exists();
+
+    if ($hasSubAgents) {
+        throw ValidationException::withMessages([
+            'agent' => [
+                'This Main Agent cannot be deleted because it still has existing Sub-Agents.',
+            ],
         ]);
     }
+
+    $this->agentService->delete($agent);
+
+    return response()->json([
+        'message' => 'Agent deleted successfully.',
+    ]);
+}
 }

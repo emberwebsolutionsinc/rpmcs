@@ -1,64 +1,105 @@
-    import api from "./api";
 
-    export default {
-        getAgents(params = {}) {
-            return api.get("/agent-management/agents", {
-                params,
-            });
-        },
+import api from "./api";
 
-        getAgent(id) {
-            return api.get(`/agent-management/agents/${id}`);
-        },
 
-        createAgent(payload) {
-            return api.post("/agent-management/agents", payload);
-        },
+export default {
+    /*
+    |--------------------------------------------------------------------------
+    | Agents
+    |--------------------------------------------------------------------------
+    */
 
-        updateAgent(id, payload) {
-            return api.put(`/agent-management/agents/${id}`, payload);
-        },
+    getAgents(params = {}) {
+        return api.get("/agent-management/agents", {
+            params,
+        });
+    },
 
-        deleteAgent(id) {
-            return api.delete(`/agent-management/agents/${id}`);
-        },
+    getAgent(id) {
+        return api.get(`/agent-management/agents/${id}`);
+    },
 
-        getAgentDocuments(agentId) {
-            return api.get(`/agent-management/agents/${agentId}/documents`);
-        },
+    createAgent(payload) {
+        return api.post(
+            "/agent-management/agents",
+            payload
+        );
+    },
 
-        uploadAgentDocument(agentId, formData, onUploadProgress = null) {
-            return api.post(
-                `/agent-management/agents/${agentId}/documents`,
-                formData,
-                {
-                    onUploadProgress,
-                }
-            );
-        },
+    createMainAgent(payload) {
+        return api.post(
+            "/agent-management/main-agents",
+            payload
+        );
+    },
 
-        downloadAgentDocument(agentId, documentId) {
-            return api.get(
-                `/agent-management/agents/${agentId}/documents/${documentId}/download`,
-                {
-                    responseType: "blob",
-                }
-            );
-        },
+    updateMainAgent(id, payload) {
+    return api.put(
+        `/agent-management/main-agents/${id}`,
+        payload
+    );
+},
 
-        deleteAgentDocument(agentId, documentId) {
-            return api.delete(
-                `/agent-management/agents/${agentId}/documents/${documentId}`
-            );
-        },
+    updateAgent(id, payload) {
+        return api.put(
+            `/agent-management/agents/${id}`,
+            payload
+        );
+    },
 
-        previewAgentDocument(agentId, documentId) {
-            return api.get(
-                `/agent-management/agents/${agentId}/documents/${documentId}/preview`,
-                {
-                    responseType: "blob",
-                }
-            );
-        },
+    deleteAgent(id) {
+        return api.delete(
+            `/agent-management/agents/${id}`
+        );
+    },
 
-    };
+    /*
+    |--------------------------------------------------------------------------
+    | Agent Documents
+    |--------------------------------------------------------------------------
+    */
+
+    getAgentDocuments(agentId) {
+        return api.get(
+            `/agent-management/agents/${agentId}/documents`
+        );
+    },
+
+    uploadAgentDocument(
+        agentId,
+        formData,
+        onUploadProgress = null
+    ) {
+        return api.post(
+            `/agent-management/agents/${agentId}/documents`,
+            formData,
+            {
+                onUploadProgress,
+            }
+        );
+    },
+
+    downloadAgentDocument(agentId, documentId) {
+        return api.get(
+            `/agent-management/agents/${agentId}/documents/${documentId}/download`,
+            {
+                responseType: "blob",
+            }
+        );
+    },
+
+    deleteAgentDocument(agentId, documentId) {
+        return api.delete(
+            `/agent-management/agents/${agentId}/documents/${documentId}`
+        );
+    },
+
+    previewAgentDocument(agentId, documentId) {
+        return api.get(
+            `/agent-management/agents/${agentId}/documents/${documentId}/preview`,
+            {
+                responseType: "blob",
+            }
+        );
+    },
+};

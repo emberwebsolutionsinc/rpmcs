@@ -14,18 +14,29 @@ class UpdateUserRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $this->merge([
-            'name' => trim((string) $this->input('name')),
-            'email' => strtolower(
-                trim((string) $this->input('email'))
-            ),
-            'is_active' => $this->boolean('is_active', true),
-        ]);
+        if (
+            $this->has(
+                'is_active'
+            )
+        ) {
+            $this->merge([
+                'is_active' =>
+                    filter_var(
+                        $this->input(
+                            'is_active'
+                        ),
+                        FILTER_VALIDATE_BOOLEAN,
+                        FILTER_NULL_ON_FAILURE
+                    ),
+            ]);
+        }
     }
 
     public function rules(): array
     {
-        $user = $this->route('user');
+        $userId =
+            $this->route('user')?->id ??
+            $this->route('user');
 
         return [
             'name' => [
@@ -38,8 +49,11 @@ class UpdateUserRequest extends FormRequest
                 'required',
                 'email',
                 'max:255',
-                Rule::unique('users', 'email')
-                    ->ignore($user?->id),
+
+                Rule::unique(
+                    'users',
+                    'email'
+                )->ignore($userId),
             ],
 
             'roles' => [
@@ -49,15 +63,9 @@ class UpdateUserRequest extends FormRequest
             ],
 
             'roles.*' => [
+                'required',
                 'integer',
-                Rule::exists('roles', 'id')
-                    ->where(
-                        fn ($query) =>
-                        $query->where(
-                            'guard_name',
-                            'web'
-                        )
-                    ),
+                'exists:roles,id',
             ],
 
             'is_active' => [
@@ -70,14 +78,38 @@ class UpdateUserRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'name.required' =>
+                'The user name is required.',
+
+            'email.required' =>
+                'The email address is required.',
+
+            'email.email' =>
+                'Please enter a valid email address.',
+
+            'email.unique' =>
+                'The email address is already in use.',
+
             'roles.required' =>
-                'Please assign at least one role.',
+                'At least one role is required.',
+
+            'roles.array' =>
+                'The selected roles are invalid.',
 
             'roles.min' =>
-                'Please assign at least one role.',
+                'At least one role must be selected.',
+
+            'roles.*.integer' =>
+                'Each selected role must be valid.',
 
             'roles.*.exists' =>
-                'One or more selected roles are invalid.',
+                'One of the selected roles does not exist.',
+
+            'is_active.required' =>
+                'The account status is required.',
+
+            'is_active.boolean' =>
+                'The account status must be active or inactive.',
         ];
     }
 }
